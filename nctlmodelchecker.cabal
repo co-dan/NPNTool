@@ -3,7 +3,7 @@
 
 name:                nctlmodelchecker
 version:             0.1.0.0
--- synopsis:            
+synopsis:            A simple model checker for nCTL
 -- description:         
 license:             BSD3
 license-file:        LICENSE
@@ -15,6 +15,10 @@ build-type:          Simple
 cabal-version:       >=1.8
 
 executable nctlmodelchecker
-  -- main-is:             
+  main-is:             Main.hs
+  hs-source-dirs:      src/
   -- other-modules:       
-  build-depends:       base ==4.5.*
+  build-depends:       base ==4.5.*,
+                       fgl ==5.4.2.*,
+                       graphviz ==2999.14.1.*,
+                       text ==0.11.*
