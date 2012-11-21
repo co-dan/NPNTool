@@ -8,9 +8,9 @@ import Data.GraphViz
 import Data.Graph.Inductive.Graphviz
 import qualified Data.Text.Lazy.IO as T
 
-statespace :: Gr [Char] ()
+statespace :: Gr [Char] [NTrans Char]
 statespace = mkGraph [(1,"a"),(2,"b"),(3,"a"),(4,"c")] 
-             [(1,2,()),(2,1,()),(3,1,()),(3,4,())]
+             [(1,2,[]),(2,1,[]),(3,1,[]),(3,4,[])]
 formula = EU (NCTLAtom 'a') (NCTLAtom 'b')
 
 main = do

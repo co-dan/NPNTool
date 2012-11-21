@@ -8,7 +8,7 @@ import Data.Function
 import Debug.Trace  
 import Data.List
 
-verify :: (Show a) => (Eq a) => Gr [a] () -> NCTL a -> Gr [NCTL a] ()
+verify :: (Show a) => (Eq a, Eq b) => Gr [a] [NTrans b] -> NCTL a b -> Gr [NCTL a b] [NTrans b]
 verify g = verifyF $ nmap (map NCTLAtom) g
 
 
@@ -22,7 +22,7 @@ lfp f a =
 
 
      
-verifyF :: (Show a) => (Eq a) => Gr [NCTL a] () -> NCTL a -> Gr [NCTL a] ()
+verifyF :: (Show a) => (Eq a,Eq b) => Gr [NCTL a b] [NTrans b] -> NCTL a b -> Gr [NCTL a b] [NTrans b]
 verifyF gr (NCTLFalse) = gr
 verifyF gr (NCTLAtom a) = gr -- we assume that all node are already tagged with atoms
 verifyF gr (NCTLNot f) = nmap notf $ verifyF gr f
