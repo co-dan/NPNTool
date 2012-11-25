@@ -8,15 +8,14 @@ import Data.GraphViz.Attributes.Complete
 import qualified Data.Text as T
 import NCTL
 
+type SS a = Gr a ()
 
-newtype SS a b = SS (Gr a b, [Int]) -- state graph + a set of nested tokens 
-
-visualize :: (Ord b, Labellable a) => Gr a [NTrans b] -> DotGraph Node
+visualize :: (Labellable a) => SS a -> DotGraph Node
 visualize =
   setDirectedness graphToDot params
   where params = nonClusteredParams { 
           fmtNode = \(_,l) -> [toLabel l]
           }
 
-instance (Show a, Show b) => Labellable [(NCTL a b)] where
-  toLabelValue = toLabelValue . show . map nctlToStr
+instance Labellable [NCTL] where
+  toLabelValue = toLabelValue . show 

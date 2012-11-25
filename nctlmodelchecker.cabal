@@ -20,5 +20,7 @@ executable nctlmodelchecker
   -- other-modules:       
   build-depends:       base ==4.5.*,
                        fgl ==5.4.2.*,
+                       mtl ==2.1.*,
+                       containers ==0.4.2.*,
                        graphviz ==2999.14.1.*,
                        text ==0.11.*

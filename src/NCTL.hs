@@ -1,52 +1,40 @@
+{-# LANGUAGE FlexibleInstances #-}
 module NCTL where
 
-data NCTL a b =
+import Data.Graph.Inductive
+
+data NCTL =
     NCTLFalse
     | NCTLTrue
-    | NCTLAtom a
-    | NCTLNot (NCTL a b)
-    | NCTLOr (NCTL a b) (NCTL a b) 
-    | EX (NCTL a b)
-    | EU (NCTL a b) (NCTL a b)
-    | EG (NCTL a b)
-    | Nmod (NNCTL a b) -- nested transition modality
-    deriving (Show,Eq)
+    | NCTLAtom (String, (Node -> Bool))
+    | NCTLNot NCTL
+    | NCTLOr NCTL NCTL
+    | EX NCTL
+    | EU NCTL
+    | EG NCTL
+    deriving (Show)
 
-data NNCTL a b =
-    NNCTLFalse
-    | NNCTLTrue
-    | NNCTLAtom (NTrans b)
-    | NNCTLNot (NNCTL a b)
-    | NNCTLOr (NNCTL a b) (NNCTL a b) 
-    | NEX (NNCTL a b)
-    | NEU (NNCTL a b) (NNCTL a b)
-    | NEG (NNCTL a b)
-    | NNmod (NCTL a b) -- nested transition modality 
-    deriving (Show,Eq)
+data NCTL' =
+    NCTLFalse'
+    | NCTLTrue'
+    | NCTLAtom' (Int, String, (Node -> Bool))
+    | NCTLNot' (Int, NCTL')
+    | NCTLOr' (Int, NCTL', NCTL')
+    | EX' (Int, NCTL')
+    | EU' (Int, NCTL')
+    | EG' (Int, NCTL')
+    deriving (Show)
 
-newtype NTrans a = NTrans (Int,a) -- t1[n2] = (2,t1)
-                 deriving (Show,Ord,Eq) 
+instance Eq NCTL' where
+  NCTLFalse' == NCTLFalse' = True
+  NCTLTrue'  == NCTLTrue'  = True
+  NCTLAtom' (i,_,_) == NCTLAtom' (j,_,_) = i == j
+  NCTLNot' (i,_) == NCTLNot' (j,_) = i == j
+  NCTLOr' (i,_,_) == NCTLOr' (j,_,_) = i == j 
+  EX' (i,_) == EX' (j,_) = i == j
+  _ == _ = False
 
-nctlToStr :: (Show a, Show b) => NCTL a b -> String
-nctlToStr NCTLFalse = "False"
-nctlToStr NCTLTrue = "False"
-nctlToStr (NCTLAtom a) = show a
-nctlToStr (NCTLNot f) = "~" ++ nctlToStr f
-nctlToStr (NCTLOr f g) = (nctlToStr f) ++ " \\/ " ++ (nctlToStr g)
-nctlToStr (EX f) = "EX " ++ (nctlToStr f)
-nctlToStr (EU f g) = "EU(" ++ (nctlToStr f) ++ ", " ++ (nctlToStr g) ++ ")"
-nctlToStr (EG f) = "EG " ++ (nctlToStr f)
-nctlToStr (Nmod f) = "[" ++ (nnctlToStr f) ++ "]"
-
-nnctlToStr :: (Show a, Show b) => NNCTL a b -> String
-nnctlToStr NNCTLFalse = "False"
-nnctlToStr NNCTLTrue = "True"
-nnctlToStr (NNCTLAtom a) = show a
-nnctlToStr (NNCTLNot f) = "~" ++ nnctlToStr f
-nnctlToStr (NNCTLOr f g) = (nnctlToStr f) ++ " \\/ " ++ (nnctlToStr g)
-nnctlToStr (NEX f) = "EX " ++ (nnctlToStr f)
-nnctlToStr (NEU f g) = "EU(" ++ (nnctlToStr f) ++ ", " ++ (nnctlToStr g) ++ ")"
-nnctlToStr (NEG f) = "EG " ++ (nnctlToStr f)
-nnctlToStr (NNmod f) = "[" ++ (nctlToStr f) ++ "]"
-
+             
+instance Show (Node -> Bool) where
+  show _ = "pred"
 
