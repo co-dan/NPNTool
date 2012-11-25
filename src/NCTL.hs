@@ -23,7 +23,13 @@ data NCTL' =
     | EX' (Int, NCTL')
     | EU' (Int, NCTL')
     | EG' (Int, NCTL')
-    deriving (Show)
+    deriving (Show,Ord)
+
+instance Eq  (Node -> Bool) where
+  _ == _ = True
+  
+instance Ord (Node -> Bool) where
+  compare _ _ = EQ
 
 instance Eq NCTL' where
   NCTLFalse' == NCTLFalse' = True

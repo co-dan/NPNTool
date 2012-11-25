@@ -16,7 +16,8 @@ a n | n == 1    = True
     | n == 3    = True
     | otherwise = False
 
-formula = NCTLOr' (1, NCTLAtom' (2, "a", a) , EX' (3, NCTLAtom' (2, "a", a)))
+formula = NCTLOr' (1, EX' (3, NCTLAtom' (2, "a", a)), NCTLAtom' (2, "a", a))
+--formula = EX' (1, NCTLAtom' (2, "a", a))
 
 main = do
   print $ evalF formula statespace 1
