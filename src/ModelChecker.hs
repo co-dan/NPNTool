@@ -1,3 +1,4 @@
+{-# LANGUAGE TypeOperators,ScopedTypeVariables #-}
 module ModelChecker where
 
 import Data.Graph.Inductive
@@ -24,6 +25,7 @@ verifyF f ss s = do
   case M.lookup (s,f) m of
     Just x -> return x
     Nothing -> do
+      put $ M.insert (s,f) False m
       r <- verify f ss s
       m <- get
       put $ M.insert (s,f) r m
@@ -31,14 +33,14 @@ verifyF f ss s = do
 
 -- | Helper functions
 -- The usual liftM2 (||) won't work here, we need a left-biased version
-orElse, andThen :: State a Bool -> State a Bool -> State a Bool
+orElse, andThen :: Monad m => m Bool -> m Bool -> m Bool
 orElse a b = do
   r <- a
   if r 
     then return True
     else b
   
-notM :: State a Bool -> State a Bool  
+notM :: Monad m => m Bool -> m Bool
 notM = liftM not
 
 andThen a b = do
@@ -48,6 +50,7 @@ andThen a b = do
     else return False
          
 anyM p l = foldM (\a b -> return a `orElse` p b) False l
+allM p l = foldM (\a b -> return a `andThen` p b) True l
 
 verify :: NCTL -> SS a -> Node -> State (M.Map (Node,NCTL) Bool) Bool
 verify NCTLFalse _ _ = return False
@@ -62,7 +65,10 @@ verify (NCTLOr f g) ss s =
 verify t@(EU f g) ss s = do
   verifyF g ss s `orElse` 
     (verifyF f ss s `andThen` anyM (verifyF t ss) (succSt ss s))
-           
+verify t@(AU f g) ss s = do           
+  verifyF g ss s `orElse` 
+    (verifyF f ss s `andThen` allM (verifyF t ss) (succSt ss s))
+
 evalF :: NCTL -> SS a -> Node -> (Bool,M.Map (Node,NCTL) Bool)
 evalF f ss s = runState (verifyF f ss s) M.empty
 

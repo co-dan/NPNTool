@@ -11,36 +11,20 @@ data NCTL =
     | NCTLOr NCTL NCTL
     | EX NCTL
     | EU NCTL NCTL
-    | EG NCTL
+    | AU NCTL NCTL
     deriving (Show,Eq,Ord)
 
-data NCTL' =
-    NCTLFalse'
-    | NCTLTrue'
-    | NCTLAtom' (Int, String, (Node -> Bool))
-    | NCTLNot' (Int, NCTL')
-    | NCTLOr' (Int, NCTL', NCTL')
-    | EX' (Int, NCTL')
-    | EU' (Int, NCTL')
-    | EG' (Int, NCTL')
-    deriving (Show,Ord)
+ef f = EU NCTLTrue f
+af f = AU NCTLTrue f
+eg f = NCTLNot $ af (NCTLNot f)
+ag f = NCTLNot $ ef (NCTLNot f)             
 
 instance Eq  (Node -> Bool) where
   _ == _ = True
   
 instance Ord (Node -> Bool) where
   compare _ _ = EQ
-
-instance Eq NCTL' where
-  NCTLFalse' == NCTLFalse' = True
-  NCTLTrue'  == NCTLTrue'  = True
-  NCTLAtom' (i,_,_) == NCTLAtom' (j,_,_) = i == j
-  NCTLNot' (i,_) == NCTLNot' (j,_) = i == j
-  NCTLOr' (i,_,_) == NCTLOr' (j,_,_) = i == j 
-  EX' (i,_) == EX' (j,_) = i == j
-  _ == _ = False
-
-             
+  
 instance Show (Node -> Bool) where
   show _ = "pred"
 
