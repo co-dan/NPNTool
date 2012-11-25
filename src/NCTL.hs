@@ -10,7 +10,7 @@ data NCTL =
     | NCTLNot NCTL
     | NCTLOr NCTL NCTL
     | EX NCTL
-    | EU NCTL
+    | EU NCTL NCTL
     | EG NCTL
     deriving (Show,Eq,Ord)
 

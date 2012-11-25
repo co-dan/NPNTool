@@ -19,6 +19,8 @@ succSt = suc
 verifyF :: NCTL -> SS a -> Node -> State (M.Map (Node,NCTL) Bool) Bool
 verifyF f ss s = do
   m <- get
+  --trace ((show f) ++ " @ " ++ (show s)) $ return ()
+  --trace (show m) $ return ()
   case M.lookup (s,f) m of
     Just x -> return x
     Nothing -> do
@@ -28,20 +30,39 @@ verifyF f ss s = do
       return r
 
 -- | Helper functions
-orM a b = liftM2 (||) a b
-notM a = liftM (not) a
+-- The usual liftM2 (||) won't work here, we need a left-biased version
+orElse, andThen :: State a Bool -> State a Bool -> State a Bool
+orElse a b = do
+  r <- a
+  if r 
+    then return True
+    else b
+  
+notM :: State a Bool -> State a Bool  
+notM = liftM not
+
+andThen a b = do
+  r <- a
+  if r  
+    then b
+    else return False
+         
+anyM p l = foldM (\a b -> return a `orElse` p b) False l
 
 verify :: NCTL -> SS a -> Node -> State (M.Map (Node,NCTL) Bool) Bool
 verify NCTLFalse _ _ = return False
 verify NCTLTrue  _ _ = return True
 verify (NCTLAtom (n,f)) ss s = return $ f s
 verify (EX f) ss s =  
-  foldM (\a b -> return a `orM` verifyF f ss b) False (succSt ss s)  
+  anyM (verifyF f ss) (succSt ss s)  
 verify (NCTLNot f) ss s =
   notM $ verifyF f ss s
 verify (NCTLOr f g) ss s =
-  verifyF f ss s `orM` verifyF g ss s
-
+  verifyF f ss s `orElse` verifyF g ss s
+verify t@(EU f g) ss s = do
+  verifyF g ss s `orElse` 
+    (verifyF f ss s `andThen` anyM (verifyF t ss) (succSt ss s))
+           
 evalF :: NCTL -> SS a -> Node -> (Bool,M.Map (Node,NCTL) Bool)
 evalF f ss s = runState (verifyF f ss s) M.empty
 

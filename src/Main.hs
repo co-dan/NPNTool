@@ -15,8 +15,10 @@ statespace = mkGraph [(1,"a"),(2,"b"),(3,"a"),(4,"c")]
 a n | n == 1    = True
     | n == 3    = True
     | otherwise = False
+b n | n == 2    = True
+    | otherwise = False
 
-formula = NCTLOr (EX (NCTLAtom ("a", a))) (NCTLAtom ("a", a))
+formula = EU (NCTLAtom ("a",a)) (NCTLAtom ("b",b))
 
 main = do
   print $ evalF formula statespace 1
