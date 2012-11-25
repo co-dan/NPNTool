@@ -16,7 +16,7 @@ instance (Eq a, Eq b) => Eq (Gr a b) where
 succSt :: SS a -> Node -> [Node]
 succSt = suc
 
-verifyF :: NCTL' -> SS a -> Node -> State (M.Map (Node,NCTL') Bool) Bool
+verifyF :: NCTL -> SS a -> Node -> State (M.Map (Node,NCTL) Bool) Bool
 verifyF f ss s = do
   m <- get
   case M.lookup (s,f) m of
@@ -31,18 +31,18 @@ verifyF f ss s = do
 orM a b = liftM2 (||) a b
 notM a = liftM (not) a
 
-verify :: NCTL' -> SS a -> Node -> State (M.Map (Node,NCTL') Bool) Bool
-verify NCTLFalse' _ _ = return False
-verify NCTLTrue'  _ _ = return True
-verify (NCTLAtom' (i,n,f)) ss s = return $ f s
-verify (EX' (i,f)) ss s =  
+verify :: NCTL -> SS a -> Node -> State (M.Map (Node,NCTL) Bool) Bool
+verify NCTLFalse _ _ = return False
+verify NCTLTrue  _ _ = return True
+verify (NCTLAtom (n,f)) ss s = return $ f s
+verify (EX f) ss s =  
   foldM (\a b -> return a `orM` verifyF f ss b) False (succSt ss s)  
-verify (NCTLNot' (i,f)) ss s =
+verify (NCTLNot f) ss s =
   notM $ verifyF f ss s
-verify (NCTLOr' (i,f,g)) ss s =
+verify (NCTLOr f g) ss s =
   verifyF f ss s `orM` verifyF g ss s
 
-evalF :: NCTL' -> SS a -> Node -> (Bool,M.Map (Node,NCTL') Bool)
+evalF :: NCTL -> SS a -> Node -> (Bool,M.Map (Node,NCTL) Bool)
 evalF f ss s = runState (verifyF f ss s) M.empty
 
 lfp f a = 

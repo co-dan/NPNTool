@@ -12,7 +12,7 @@ data NCTL =
     | EX NCTL
     | EU NCTL
     | EG NCTL
-    deriving (Show)
+    deriving (Show,Eq,Ord)
 
 data NCTL' =
     NCTLFalse'
