@@ -16,7 +16,7 @@ instance (Eq a, Eq b) => Eq (Gr a b) where
 
 -- | Successors of a node
 succSt :: SS a -> Node -> [Node]
-succSt = suc
+succSt (g,_,_) = suc g
 
 -- | Helper functions
 -- The usual liftM2 f won't work here, we need a left-biased version
