@@ -23,11 +23,11 @@ ntrmap = M.empty
 tokens :: [ET]
 tokens = []
 
-labCheck a n = (fromJust $ lab gr n) == a
+labCheck a n = fromJust (lab gr n) == a
 atom a = NCTLAtom (a,labCheck a)
 
 formula = eg (NCTLOr (atom "a") (atom "b"))
 
-main = do
+main = 
   print $ evalF formula statespace 3
   

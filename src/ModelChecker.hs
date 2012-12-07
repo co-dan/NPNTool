@@ -34,8 +34,8 @@ notM :: Monad m => m Bool -> m Bool
 notM = liftM not
 
 anyM,allM :: Monad m => (a -> m Bool) -> [a] -> m Bool
-anyM p l = foldM (\a b -> return a `orElse` p b) False l
-allM p l = foldM (\a b -> return a `andThen` p b) True l
+anyM p = foldM (\a b -> return a `orElse` p b) False
+allM p = foldM (\a b -> return a `andThen` p b) True
 
 -- | Recursive memozied verification function
 
@@ -77,10 +77,10 @@ verify (NCTLNot f) ss s =
   notM $ verifyF f ss s
 verify (NCTLOr f g) ss s =
   verifyF f ss s `orElse` verifyF g ss s
-verify t@(EU f g) ss s = do
+verify t@(EU f g) ss s =
   verifyF g ss s `orElse` 
     (verifyF f ss s `andThen` anyM (verifyF t ss) (succSt ss s))
-verify t@(AU f g) ss s = do           
+verify t@(AU f g) ss s =            
   verifyF g ss s `orElse` 
     (verifyF f ss s `andThen` allM (verifyF t ss) (succSt ss s))
 verify (NMod f) ss s = allM (verifyN f ss) (outEdges ss s) 
@@ -96,7 +96,14 @@ verifyN' (NCTLTrans (n,f)) ss tok e = return (f e)
                                       `andThen` return (fired ss e tok)
 verifyN' (EX f) ss tok e =  
   anyM (verifyNF f ss tok) (succTr ss e)  
-verifyN' t@(AU f g) ss tok e = do           
+verifyN' (NCTLNot f) ss tok e =
+  notM $ verifyNF f ss tok e
+verifyN' (NCTLOr f g) ss tok e =
+  verifyNF f ss tok e `orElse` verifyNF g ss tok e
+verifyN' t@(EU f g) ss tok e =            
+  verifyNF g ss tok e `orElse` 
+    (verifyNF f ss tok e `andThen` anyM (verifyNF t ss tok) (succTr ss e))
+verifyN' t@(AU f g) ss tok e =            
   verifyNF g ss tok e `orElse` 
     (verifyNF f ss tok e `andThen` allM (verifyNF t ss tok) (succTr ss e))
                                       

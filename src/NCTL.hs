@@ -6,8 +6,8 @@ import Data.Graph.Inductive
 data NCTL =
   NCTLFalse
   | NCTLTrue
-  | NCTLAtom (String, (Node -> Bool))
-  | NCTLTrans (String, (Edge -> Bool))
+  | NCTLAtom (String, Node -> Bool)
+  | NCTLTrans (String, Edge -> Bool)
   | NCTLNot NCTL
   | NCTLOr NCTL NCTL
   | EX NCTL
@@ -17,9 +17,9 @@ data NCTL =
   deriving (Show,Eq,Ord)
     
 -- | Derived formulae           
-
-ef f = EU NCTLTrue f
-af f = AU NCTLTrue f
+ef,af,eg,ag :: NCTL -> NCTL
+ef = EU NCTLTrue
+af = AU NCTLTrue 
 eg f = NCTLNot $ af (NCTLNot f)
 ag f = NCTLNot $ ef (NCTLNot f)             
 
