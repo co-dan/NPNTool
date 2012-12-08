@@ -5,8 +5,6 @@ import Text.Parsec.Expr
 import Control.Applicative
 import NCTL
 
-type Nctl = NCTL String String
-
 binary :: String -> (a -> a -> a) -> Assoc -> Operator String () Identity a
 binary name fun assoc = Infix (do { string name; return fun }) assoc
 
@@ -14,72 +12,44 @@ exprP :: OperatorTable String () Identity a -> Parser a -> Parser a
 exprP table factor = buildExpressionParser table factor
                   <?> "expression"
 
-expr :: Parser (NCTL String String)
+expr :: Parser NCTL
 expr = exprP table factor
-
-exprNested :: Parser (NNCTL String String)
-exprNested = exprP tableNested factorNested
 
 table = [ [binary "&&" nctlAnd AssocLeft]
         , [binary "||" NCTLOr  AssocLeft]]
   where nctlAnd a b = NCTLNot $ NCTLOr (NCTLNot a) (NCTLNot b)
 
-tableNested = [ [binary "&&" nctlAnd AssocLeft]
-              , [binary "||" NNCTLOr  AssocLeft]]
-  where nctlAnd a b = NNCTLNot $ NNCTLOr (NNCTLNot a) (NNCTLNot b)        
-        
-factor :: Parser (NCTL String String)
+factor :: Parser NCTL
 factor = spaces *> value <* spaces
   where value = choice [ NCTLTrue <$ string "true"
                        , NCTLFalse <$ string "false"
                        , NCTLNot <$> (char '~' *> factor)
-                       , tempModalities
+                       , tempModalitiesAr1
+                       , tempModalitiesAr2
                        , (char '(' *> spaces) *> expr <* (spaces <* char ')')
-                       , fmap Nmod $ (char '[' *> spaces) *> exprNested <* (spaces <* char ']') ]
-        tempModalities = exParser <|> euParser
+                       , fmap NMod $ (char '[' *> spaces) *> expr <* (spaces <* char ']') ]
+        tempModalitiesAr1 = foldl1 (<|>) $ map (uncurry ar1Parser) (fst tempModalitiesTable)
+        tempModalitiesAr2 = foldl1 (<|>) $ map (uncurry ar2Parser) (snd tempModalitiesTable)
 
-factorNested :: Parser (NNCTL String String)
-factorNested = spaces *> value <* spaces
-  where value = choice [ NNCTLTrue <$ string "true"
-                       , NNCTLFalse <$ string "false"
-                       , NNCTLNot <$> (char '~' *> factorNested)
-                       , tempModalities
-                       , (char '(' *> spaces) *> exprNested <* (spaces <* char ')')]
-        tempModalities = exParserN <|> euParserN
+tempModalitiesTable = ( [("EX", EX), ("EF", ef), ("AF", af), ("EG", eg), ("AG", ag)]
+                      , [("EU", EU), ("AU", AU)])
 
--- TODO: any tricks for code reuse?
-exParser :: Parser (NCTL String String)                     
-exParser = do  
-  try $ string "EX"
-  spaces >> char '(' 
+  
+ar1Parser :: String -> (NCTL -> NCTL) -> Parser NCTL  
+ar1Parser s constr = do
+  try $ string s
+  spaces >> char '('
   e <- expr
   spaces >> char ')'
-  return $ EX e
+  return $ constr e
 
-euParser :: Parser (NCTL String String)
-euParser = do
-  try $ string "EU"
+ar2Parser :: String -> (NCTL -> NCTL -> NCTL) -> Parser NCTL
+ar2Parser s constr = do
+  try $ string s
   spaces >> char '('
   e1 <- expr
   spaces >> char ',' >> spaces
   e2 <- expr
   spaces >> char ')'
-  return $ EU e1 e2
+  return $ constr e1 e2
 
-exParserN :: Parser (NNCTL String String)                     
-exParserN = do  
-  try $ string "EX"
-  spaces >> char '(' 
-  e <- exprNested
-  spaces >> char ')'
-  return $ NEX e
-
-euParserN :: Parser (NNCTL String String)
-euParserN = do
-  try $ string "EU"
-  spaces >> char '('
-  e1 <- exprNested
-  spaces >> char ',' >> spaces
-  e2 <- exprNested
-  spaces >> char ')'
-  return $ NEU e1 e2
