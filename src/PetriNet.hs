@@ -1,5 +1,8 @@
 {-# LANGUAGE Rank2Types, FlexibleContexts #-}
-module PetriNet where
+module PetriNet (
+  Net(..), Trans(..), SS,
+  enabled, fire,
+  reachabilityGraph) where
 
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -7,7 +10,8 @@ import qualified Data.List as List
 import Data.Monoid
 import Data.Graph.Inductive (Gr)
 import qualified Data.Graph.Inductive as G
-import Data.Graph.Inductive.NodeMap
+--import Data.Graph.Inductive.NodeMap
+import NodeMap
 import qualified Data.Foldable as F
 
 data Trans p = Trans 
@@ -49,53 +53,57 @@ fire net@(Net {pre=pre, post=post}) mark t =
 
 type SS = Gr PTMark PTTrans
 
--- reachabilityGraph :: PTNet -> (a, (NodeMap PTMark, Gr PTMark ()))
--- reachabilityGraph net = go (Set.singleton (initial net)) (insMapNodeM (initial net) >> return ())
---   where go work | Set.null work = return ()
---                 | otherwise     = do
---           let m = (head . Set.toList) work 
---               work' = Set.delete m work
---               act a t = 
---                 if enabled net m t
---                 then 
---           insMapNodeM m
---           F.foldrM act (trans m)
-  
-  
-  
-              
-    
 --- How to pick an arbitrary M from the set Work?
-reachabilitySet :: PTNet -> ((), (NodeMap PTMark, Gr PTMark ()))
-reachabilitySet net = go (Set.singleton (initial net)) (insMapNodeM (initial net) >> return ())
-  where go work acc | Set.null work = run G.empty acc
-                    | otherwise = 
-                      let m = (head . Set.toList) work 
-                          work' = Set.delete m work
-                          m' = Set.map (fire net m) (Set.filter (enabled net m) (trans net))
-                          act t = 
-                            if enabled net m t
-                            then do
-                              let m' = fire net m t
-                              insMapNodeM m'
-                              return ()
---                              insMapEdgeM (m,m',())
-                            else return ()
-                          acc' = acc >> F.mapM_ act (trans net)
-                      in go (Set.union work' m') acc'
-        
+reachabilityGraph :: PTNet -> ((), (NodeMap PTMark, SS))
+reachabilityGraph net = run G.empty $ insMapNodeM (initial net) >> go (Set.singleton (initial net))
+  where go work | Set.null work = return ()
+                | otherwise     = do
+          let m = (head . Set.toList) work 
+              work' = Set.delete m work
+          work'' <- F.foldrM (act net m) work' (trans net)
+          go work'' 
+  
+act :: G.DynGraph g => 
+       PTNet -> PTMark -> PTTrans -> (Set PTMark) -> NodeMapM PTMark PTTrans g (Set PTMark)
+act net m t w =
+  if enabled net m t
+  then do 
+     let m' = fire net m t
+     present <- lookupNodeM m'
+     w' <- case present of
+                Just _ -> return w
+                Nothing -> do
+                  insMapNodeM m'
+                  return (Set.insert m' w)
+     insMapEdgeM (m,m',t)
+     return w'
+  else return w
+  
                       
 pn1 :: PTNet
 pn1 = Net { places = Set.fromList [1,2,3,4]
           , trans  = Set.fromList [t1]
-          , pre    = \x -> case x of
-               t1 -> [1,2]
+          , pre    = \(Trans x) -> case x of
+               "t1" -> [1,2]
                _  -> []
-          , post   = \x -> case x of
-               t1 -> [3,4]
+          , post   = \(Trans x) -> case x of
+               "t1" -> [3,4]
                _  -> []
           , initial = [1,2,1,2]
           } 
   where t1 = Trans "t1"
   
+pn2 :: PTNet         
+pn2 = Net { places = Set.fromList [1,2]
+          , trans  = Set.fromList [t1,t2]
+          , pre    = \(Trans x) -> case x of
+               "t1" -> [1]
+               "t2" -> [2]
+          , post   = \(Trans x) -> case x of
+               "t1" -> [2]
+               "t2" -> [1]
+          , initial = [1]
+          } 
+  where t1 = Trans "t1"
+        t2 = Trans "t2"
       
