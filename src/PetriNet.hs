@@ -1,10 +1,12 @@
 {-# LANGUAGE Rank2Types, FlexibleContexts #-}
 module PetriNet (
   Net(..), Trans(..), SS,
+  PTNet, PTMark, PTTrans,
   enabled, fire,
   reachabilityGraph) where
 
 import Data.Set (Set)
+import Data.List (sort)
 import qualified Data.Set as Set
 import qualified Data.List as List
 import Data.Monoid
@@ -54,8 +56,9 @@ fire net@(Net {pre=pre, post=post}) mark t =
 type SS = Gr PTMark PTTrans
 
 --- How to pick an arbitrary M from the set Work?
-reachabilityGraph :: PTNet -> ((), (NodeMap PTMark, SS))
-reachabilityGraph net = run G.empty $ insMapNodeM (initial net) >> go (Set.singleton (initial net))
+reachabilityGraph :: PTNet -> SS
+reachabilityGraph net = run_ G.empty $ 
+                        insMapNodeM (initial net) >> go (Set.singleton (initial net))
   where go work | Set.null work = return ()
                 | otherwise     = do
           let m = (head . Set.toList) work 
@@ -68,7 +71,7 @@ act :: G.DynGraph g =>
 act net m t w =
   if enabled net m t
   then do 
-     let m' = fire net m t
+     let m' = sort $ fire net m t
      present <- lookupNodeM m'
      w' <- case present of
                 Just _ -> return w
@@ -80,30 +83,3 @@ act net m t w =
   else return w
   
                       
-pn1 :: PTNet
-pn1 = Net { places = Set.fromList [1,2,3,4]
-          , trans  = Set.fromList [t1]
-          , pre    = \(Trans x) -> case x of
-               "t1" -> [1,2]
-               _  -> []
-          , post   = \(Trans x) -> case x of
-               "t1" -> [3,4]
-               _  -> []
-          , initial = [1,2,1,2]
-          } 
-  where t1 = Trans "t1"
-  
-pn2 :: PTNet         
-pn2 = Net { places = Set.fromList [1,2]
-          , trans  = Set.fromList [t1,t2]
-          , pre    = \(Trans x) -> case x of
-               "t1" -> [1]
-               "t2" -> [2]
-          , post   = \(Trans x) -> case x of
-               "t1" -> [2]
-               "t2" -> [1]
-          , initial = [1]
-          } 
-  where t1 = Trans "t1"
-        t2 = Trans "t2"
-      
