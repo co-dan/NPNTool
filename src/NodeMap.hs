@@ -1,3 +1,4 @@
+{-# LANGUAGE TupleSections #-}
 module NodeMap(
     -- * Functional Construction
     NodeMap,

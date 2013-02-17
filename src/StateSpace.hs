@@ -2,9 +2,9 @@
 module StateSpace where
 
 import Data.Graph.Inductive
-import Data.GraphViz
-import Data.GraphViz.Attributes
-import Data.GraphViz.Attributes.Complete
+-- import Data.GraphViz
+-- import Data.GraphViz.Attributes
+-- import Data.GraphViz.Attributes.Complete
 import qualified Data.Text as T
 import qualified Data.Map as M
 import Data.Maybe (fromMaybe)

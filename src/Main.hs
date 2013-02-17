@@ -4,8 +4,8 @@ import ModelChecker
 import Data.Graph.Inductive
 import NCTL
 import StateSpace
-import Data.GraphViz
-import Data.Graph.Inductive.Graphviz
+-- import Data.GraphViz
+-- import Data.Graph.Inductive.Graphviz
 import qualified Data.Text.Lazy.IO as T
 import qualified Data.Map as M
 import Data.Maybe (fromJust)
