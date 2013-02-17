@@ -38,9 +38,9 @@ type PTTrans = Trans Int
 
 sublist :: Eq a => [a] -> [a] -> Bool             
 sublist [] _ = True
-sublist (x:xs) ys = if x `elem` ys
-                    then sublist xs (List.delete x ys)
-                    else False
+sublist (x:xs) ys = (x `elem` ys) &&
+                    sublist xs (List.delete x ys)
+                    
 
 enabled :: PTNet -> PTMark -> PTTrans -> Bool
 enabled net@(Net {pre=pre}) marking =
@@ -48,7 +48,7 @@ enabled net@(Net {pre=pre}) marking =
 
 fire :: PTNet -> PTMark -> PTTrans -> PTMark
 fire net@(Net {pre=pre, post=post}) mark t =
-  (mark List.\\ (pre t)) <> (post t) 
+  (mark List.\\ pre t) <> post t
 
 
 -- reuse types from StateSpace module
@@ -67,7 +67,7 @@ reachabilityGraph net = run_ G.empty $
           go work'' 
   
 act :: G.DynGraph g => 
-       PTNet -> PTMark -> PTTrans -> (Set PTMark) -> NodeMapM PTMark PTTrans g (Set PTMark)
+       PTNet -> PTMark -> PTTrans -> Set PTMark -> NodeMapM PTMark PTTrans g (Set PTMark)
 act net m t w =
   if enabled net m t
   then do 

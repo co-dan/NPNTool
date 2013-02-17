@@ -34,7 +34,7 @@ pn2 = Net { places = Set.fromList [1,2]
       
 
 atom :: PTMark -> CTL
-atom a = CTLAtom (show a, \x->x==a)
+atom a = CTLAtom (show a, (==a))
 
 formula :: CTL
 formula = ef (CTLOr (atom [2,2,3,4]) (atom [3,3,4,4]))
