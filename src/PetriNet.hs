@@ -3,7 +3,8 @@ module PetriNet (
   Net(..), Trans(..), SS,
   PTNet, PTMark, PTTrans,
   enabled, fire,
-  reachabilityGraph) where
+  reachabilityGraph
+  ) where
 
 import Data.Set (Set)
 import Data.List (sort)
@@ -16,25 +17,23 @@ import qualified Data.Graph.Inductive as G
 import NodeMap
 import qualified Data.Foldable as F
 
-data Trans p = Trans 
-               { name :: String
-               }
-             deriving (Eq,Ord)
+data Trans = Trans { name :: String }
+           deriving (Eq,Ord)
                       
-instance Show (Trans p) where
+instance Show Trans where
   show = name
 
 data Net p n m = Net 
                { places :: Set p
-               , trans :: Ord (Trans p) => Set (Trans p)
-               , pre :: Trans p -> n p
-               , post :: Trans p -> n p
+               , trans :: Set Trans
+               , pre :: Trans -> n p
+               , post :: Trans -> n p
                , initial :: m p
                }
 
 type PTNet = Net Int [] []
 type PTMark = [Int]
-type PTTrans = Trans Int
+type PTTrans = Trans
 
 sublist :: Eq a => [a] -> [a] -> Bool             
 sublist [] _ = True
