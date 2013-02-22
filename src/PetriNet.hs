@@ -9,6 +9,8 @@ module PetriNet (
 import Data.Set (Set)
 import Data.List (sort)
 import qualified Data.Set as Set
+import Data.MultiSet (MultiSet)
+import qualified Data.MultiSet as MSet
 import qualified Data.List as List
 import Data.Monoid
 import Data.Graph.Inductive (Gr)
@@ -31,23 +33,18 @@ data Net p n m = Net
                , initial :: m p
                }
 
-type PTNet = Net Int [] []
-type PTMark = [Int]
+type PTNet = Net Int MultiSet MultiSet
+type PTMark = MultiSet Int
 type PTTrans = Trans
 
-sublist :: Eq a => [a] -> [a] -> Bool             
-sublist [] _ = True
-sublist (x:xs) ys = (x `elem` ys) &&
-                    sublist xs (List.delete x ys)
-                    
 
 enabled :: PTNet -> PTMark -> PTTrans -> Bool
 enabled net@(Net {pre=pre}) marking =
-  flip sublist marking . pre
+  (`MSet.isSubsetOf` marking)  . pre
 
 fire :: PTNet -> PTMark -> PTTrans -> PTMark
 fire net@(Net {pre=pre, post=post}) mark t =
-  (mark List.\\ pre t) <> post t
+  (mark MSet.\\ pre t) <> post t
 
 
 -- reuse types from StateSpace module
@@ -70,7 +67,7 @@ act :: G.DynGraph g =>
 act net m t w =
   if enabled net m t
   then do 
-     let m' = sort $ fire net m t
+     let m' = fire net m t
      present <- lookupNodeM m'
      w' <- case present of
                 Just _ -> return w
