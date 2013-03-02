@@ -6,7 +6,7 @@ import Control.Monad
 import CTL
 import qualified Data.Set as Set
 import qualified Data.MultiSet as MSet
-
+import Graphviz
 
 pn1 :: PTNet
 pn1 = Net { places = Set.fromList [1,2,3,4]
@@ -50,6 +50,7 @@ pn3 = snd . run' $ do
   outT t2 p2
   inT  p2 t3
   outT t3 p1
+  return ()
   
 atom :: [Int] -> CTL
 atom a = CTLAtom (show (MSet.fromList a), (==MSet.fromList a))
