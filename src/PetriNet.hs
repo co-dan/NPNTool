@@ -7,11 +7,9 @@ module PetriNet (
   ) where
 
 import Data.Set (Set)
-import Data.List (sort)
 import qualified Data.Set as Set
 import Data.MultiSet (MultiSet)
 import qualified Data.MultiSet as MSet
-import qualified Data.List as List
 import Data.Monoid
 import Data.Graph.Inductive (Gr)
 import qualified Data.Graph.Inductive as G
@@ -39,11 +37,11 @@ type PTTrans = Trans
 
 
 enabled :: PTNet -> PTMark -> PTTrans -> Bool
-enabled net@(Net {pre=pre}) marking =
+enabled (Net {pre=pre}) marking =
   (`MSet.isSubsetOf` marking)  . pre
 
 fire :: PTNet -> PTMark -> PTTrans -> PTMark
-fire net@(Net {pre=pre, post=post}) mark t =
+fire (Net {pre=pre, post=post}) mark t =
   (mark MSet.\\ pre t) <> post t
 
 
@@ -78,4 +76,3 @@ act net m t w =
      return w'
   else return w
   
-                      
