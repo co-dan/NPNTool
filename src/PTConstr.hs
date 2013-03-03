@@ -1,7 +1,9 @@
+{-# LANGUAGE TypeFamilies, TypeSynonymInstances #-}
 module PTConstr (
   PTConstr(..), PTConstrM,
   new, run, mkPlace,
-  inT, outT, inTn, outTn
+  inT, outT, inTn, outTn,
+  Arc (..), arcn
   ) where
 
 import PetriNet
@@ -46,23 +48,38 @@ mkPlace = do
   put $ c {p = Set.insert key' p', key = key' + 1}
   return key'
 
-inT :: Int -> Trans -> PTConstrM ()
+class Arc k where
+  type Co k :: *
+  arc :: k -> Co k -> PTConstrM ()
+
+arcn :: Arc k => k -> Co k -> Int -> PTConstrM ()
+arcn a b n = replicateM_ n $ arc a b
+
+instance Arc Trans where  
+  type Co Trans = PTPlace
+  arc = outT
+
+instance Arc PTPlace where  
+  type Co PTPlace = Trans
+  arc = inT
+  
+inT :: PTPlace -> Trans -> PTConstrM ()
 inT p t = do
   c <- get
   let pre' = tin c
   put $ c { tin = M.insertWith MSet.union t (MSet.singleton p) pre'}
 
-outT :: Trans -> Int -> PTConstrM ()
+outT :: Trans -> PTPlace -> PTConstrM ()
 outT t p = do
   c <- get
   let post' = tout c
   put $ c { tout = M.insertWith MSet.union t (MSet.singleton p) post' }  
 
-inTn :: Int -> Trans -> Int -> PTConstrM ()  
-inTn p t n = (replicateM n $ inT p t) >> return ()
+inTn :: PTPlace -> Trans -> Int -> PTConstrM ()  
+inTn p t n = replicateM_ n $ inT p t
 
-outTn :: Trans -> Int -> Int -> PTConstrM ()
-outTn t p n = (replicateM n $ outT t p) >> return ()
+outTn :: Trans -> PTPlace -> Int -> PTConstrM ()
+outTn t p n = replicateM_ n $ outT t p
 
 run :: PTConstrM a -> PTConstr -> (a, PTNet)
 run c s =

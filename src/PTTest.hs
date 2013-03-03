@@ -44,12 +44,12 @@ pn3 :: PTNet
 pn3 = snd . run' $ do
   let [t1,t2,t3] = map Trans ["t1", "t2", "t3"]
   [p1,p2] <- replicateM 2 mkPlace
-  inT  p1 t1
-  inT  p1 t2
-  outT t1 p2
-  outT t2 p2
-  inT  p2 t3
-  outT t3 p1
+  arc p1 t1
+  arc p1 t2
+  arc t1 p2
+  arc t2 p2
+  arc p2 t3
+  arc t3 p1
   return ()
   
 atom :: [Int] -> CTL

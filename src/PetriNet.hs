@@ -1,7 +1,7 @@
 {-# LANGUAGE Rank2Types, FlexibleContexts #-}
 module PetriNet (
   Net(..), Trans(..), SS,
-  PTNet, PTMark, PTTrans,
+  PTNet, PTMark, PTTrans, PTPlace,
   enabled, fire,
   reachabilityGraph
   ) where
@@ -31,10 +31,10 @@ data Net p n m = Net
                , initial :: m p
                }
 
-type PTNet = Net Int MultiSet MultiSet
-type PTMark = MultiSet Int
+type PTNet   = Net PTPlace MultiSet MultiSet
+type PTMark  = MultiSet PTPlace
 type PTTrans = Trans
-
+type PTPlace = Int
 
 enabled :: PTNet -> PTMark -> PTTrans -> Bool
 enabled (Net {pre=pre}) marking =
