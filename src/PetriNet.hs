@@ -3,7 +3,8 @@ module PetriNet (
   Net(..), Trans(..), SS,
   PTNet, PTMark, PTTrans, PTPlace,
   enabled, fire,
-  reachabilityGraph
+  reachabilityGraph,
+  postP, preP
   ) where
 
 import Data.Set (Set)
@@ -76,3 +77,12 @@ act net m t w =
      return w'
   else return w
   
+-- | Additional functionality
+
+postP :: (Eq p, F.Foldable n) => p -> Net p n m -> [Trans]
+postP p (Net {trans=trans, pre=preT, post=postT}) = 
+  F.foldMap (\x -> if F.any (== p) (preT x) then [x] else []) trans
+
+preP :: (Eq p, F.Foldable n) => p -> Net p n m -> [Trans]
+preP p (Net {trans=trans, pre=preT, post=postT}) = 
+  F.foldMap (\x -> if F.any (== p) (postT x) then [x] else []) trans
