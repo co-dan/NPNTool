@@ -7,6 +7,7 @@ import CTL
 import qualified Data.Set as Set
 import qualified Data.MultiSet as MSet
 import Graphviz
+import NPNet
 
 pn1 :: PTNet
 pn1 = Net { places = Set.fromList [1,2,3,4]
@@ -57,3 +58,22 @@ atom a = CTLAtom (show (MSet.fromList a), (==MSet.fromList a))
 
 formula :: CTL
 formula = ef (CTLOr (atom [2,2,3,4]) (atom [3,3,4,4]))
+
+sn1 :: SNet String String PTPlace
+sn1 = SNet { net = sn1'
+           , elementNets = []
+           , label = undefined
+           , labels = Set.empty
+           }
+      
+sn1' = Net { places = Set.fromList [1,2,3,4]
+           , trans  = Set.fromList [t1]
+           , pre    = \(Trans x) -> case x of
+                "t1" -> MSExpr $ MSet.fromList [(Plus (Var "x") (Var "y"), 1)]
+           , post   = \(Trans x) -> case x of
+                "t1" -> MSExpr $ MSet.fromList [(Plus (Var "x") (Var "y"), 2),
+                                       (Const 1, 3),
+                                       (Var "y", 4)]
+           , initial = MSet.fromList [1]
+          } 
+  where t1 = Trans "t1"

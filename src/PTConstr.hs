@@ -23,7 +23,7 @@ data PTConstr =
   , tout :: M.Map Trans (MultiSet Int) 
   }
   
-type PTConstrM a = State PTConstr a
+type PTConstrM = State PTConstr 
 
 new :: PTConstr                   
 new = PTConstr { p = Set.empty, key = 1, tin = M.empty, tout = M.empty }
