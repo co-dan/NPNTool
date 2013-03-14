@@ -2,6 +2,7 @@
 module PetriNet (
   Net(..), Trans(..), SS,
   PTNet, PTMark, PTTrans, PTPlace,
+  HLArc, LLArc, annotate,
   enabled, fire,
   reachabilityGraph,
   postP, preP
@@ -12,6 +13,8 @@ import qualified Data.Set as Set
 import Data.MultiSet (MultiSet)
 import qualified Data.MultiSet as MSet
 import Data.Monoid
+import Data.Functor.Identity
+import Data.Functor.Compose
 import Data.Graph.Inductive (Gr)
 import qualified Data.Graph.Inductive as G
 --import Data.Graph.Inductive.NodeMap
@@ -32,10 +35,19 @@ data Net p n m = Net
                , initial :: m p
                }
 
+newtype HLArc a p = Arc { unArc :: (MultiSet (a p)) }
+type LLArc   = HLArc Identity
 type PTNet   = Net PTPlace MultiSet MultiSet
 type PTMark  = MultiSet PTPlace
 type PTTrans = Trans
 type PTPlace = Int
+
+-- | Annotate net using additional functors of place/transition relationship
+annotate :: (Functor a, Functor n) => 
+              Net p n m -> (p -> Trans -> a p) -> (Trans -> p -> a p) -> Net p (Compose n a) m
+annotate n f g = n { pre = \t -> Compose $ fmap (flip f t) (pre n t) 
+                   , post = \t -> Compose $ fmap (g t) (post n t) }
+
 
 enabled :: PTNet -> PTMark -> PTTrans -> Bool
 enabled (Net {pre=pre}) marking =
