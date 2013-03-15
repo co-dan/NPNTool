@@ -1,7 +1,7 @@
 {-# LANGUAGE TypeFamilies, TypeSynonymInstances #-}
 module PTConstr (
   PTConstr(..), PTConstrM,
-  new, run, mkPlace,
+  new, run, mkPlace, insPlace, 
   inT, outT, inTn, outTn,
   Arc (..), arcn
   ) where
@@ -18,12 +18,12 @@ import Data.Maybe (fromMaybe)
 
 data PTConstr =
   PTConstr
-  { p    :: Set Int, key :: Int
-  , tin  :: M.Map Trans (MultiSet Int)
-  , tout :: M.Map Trans (MultiSet Int) 
+  { p    :: Set PTPlace, key :: Int
+  , tin  :: M.Map Trans (MultiSet PTPlace)
+  , tout :: M.Map Trans (MultiSet PTPlace) 
   }
   
-type PTConstrM = State PTConstr 
+type PTConstrM = State PTConstr
 
 new :: PTConstr                   
 new = PTConstr { p = Set.empty, key = 1, tin = M.empty, tout = M.empty }
@@ -47,6 +47,13 @@ mkPlace = do
       p'   = p c
   put $ c {p = Set.insert key' p', key = key' + 1}
   return key'
+
+insPlace :: PTPlace -> PTConstrM ()
+insPlace newP = do
+  c <- get
+  let p' = p c
+  put $ c {p = Set.insert newP p'}
+
 
 class Arc k where
   type Co k :: *

@@ -77,3 +77,29 @@ sn1' = Net { places = Set.fromList [1,2,3,4]
            , initial = MSet.fromList [1]
           } 
   where t1 = Trans "t1"
+        
+sn2 :: SNet String String PTPlace
+sn2 = SNet { net = sn2'
+           , elementNets = []
+           , label = undefined
+           , labels = Set.empty
+           }
+      
+sn2' = Net { places = Set.fromList [1,2,3,4,5,6]
+           , trans  = Set.fromList [t1,t2,t3,t4]
+           , pre    = \(Trans t) -> case t of
+                "t1" -> MSExpr $ MSet.fromList [(x, 1), (y, 2)]
+                "t2" -> MSExpr $ MSet.fromList [(x, 3), (y, 4)]
+                "t3" -> MSExpr $ MSet.fromList [(x, 5)]                
+                "t4" -> MSExpr $ MSet.fromList [(x, 6)]                
+           , post   = \(Trans t) -> case t of
+                "t1" -> MSExpr $ MSet.fromList [(x, 3), (y, 4)]
+                "t2" -> MSExpr $ MSet.fromList [(x, 5), (y, 6)]
+                "t3" -> MSExpr $ MSet.fromList [(x, 5), (x, 6)]
+                "t4" -> MSExpr $ MSet.fromList [(x, 4)]                
+           , initial = MSet.fromList [1]
+          } 
+  where [t1,t2,t3,t4] = map Trans ["t1","t2","t3","t4"]
+        x = Var "x" :: Expr String Int
+        y = Var "y" :: Expr String Int
+  
