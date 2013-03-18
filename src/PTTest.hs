@@ -38,7 +38,7 @@ pn2 = Net { places = Set.fromList [1,2]
         t2 = Trans "t2"
 
         
-run' :: PTConstrM a -> (a, PTNet)
+run' :: PTConstrM l a -> (a, PTNet)
 run' = flip run new        
 
 pn3 :: PTNet
@@ -62,7 +62,7 @@ formula = ef (CTLOr (atom [2,2,3,4]) (atom [3,3,4,4]))
 sn1 :: SNet String String PTPlace
 sn1 = SNet { net = sn1'
            , elementNets = []
-           , label = undefined
+           , labelling = undefined
            , labels = Set.empty
            }
       
@@ -81,7 +81,7 @@ sn1' = Net { places = Set.fromList [1,2,3,4]
 sn2 :: SNet String String PTPlace
 sn2 = SNet { net = sn2'
            , elementNets = []
-           , label = undefined
+           , labelling = undefined
            , labels = Set.empty
            }
       

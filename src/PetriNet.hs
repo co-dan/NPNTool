@@ -8,6 +8,8 @@ module PetriNet (
   postP, preP
   ) where
 
+import Prelude hiding (fmap)
+import OrdFunctor
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.MultiSet (MultiSet)
@@ -43,7 +45,7 @@ type PTTrans = Trans
 type PTPlace = Int
 
 -- | Annotate net using additional functors of place/transition relationship
-annotate :: (Functor a, Functor n) => 
+annotate :: (OrdFunctor a, OrdFunctor n, Ord p, Ord (a p)) => 
               Net p n m -> (p -> Trans -> a p) -> (Trans -> p -> a p) -> Net p (Compose n a) m
 annotate n f g = n { pre = \t -> Compose $ fmap (flip f t) (pre n t) 
                    , post = \t -> Compose $ fmap (g t) (post n t) }
