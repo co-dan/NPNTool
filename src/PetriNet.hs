@@ -29,24 +29,24 @@ data Trans = Trans { name :: String }
 instance Show Trans where
   show = name
 
-data Net p n m = Net 
-               { places :: Set p
-               , trans :: Set Trans
-               , pre :: Trans -> n p
-               , post :: Trans -> n p
-               , initial :: m p
-               }
+data Net p t n m = Net 
+     { places :: Set p
+     , trans :: Set t
+     , pre :: t -> n p
+     , post :: t -> n p
+     , initial :: m p
+     }
 
 newtype HLArc a p = Arc { unArc :: (MultiSet (a p)) }
 type LLArc   = HLArc Identity
-type PTNet   = Net PTPlace MultiSet MultiSet
+type PTNet   = Net PTPlace Trans MultiSet MultiSet
 type PTMark  = MultiSet PTPlace
 type PTTrans = Trans
 type PTPlace = Int
 
 -- | Annotate net using additional functors of place/transition relationship
 annotate :: (OrdFunctor a, OrdFunctor n, Ord p, Ord (a p)) => 
-              Net p n m -> (p -> Trans -> a p) -> (Trans -> p -> a p) -> Net p (Compose n a) m
+              Net p t n m -> (p -> t -> a p) -> (t -> p -> a p) -> Net p t (Compose n a) m
 annotate n f g = n { pre = \t -> Compose $ fmap (flip f t) (pre n t) 
                    , post = \t -> Compose $ fmap (g t) (post n t) }
 
@@ -64,7 +64,7 @@ fire (Net {pre=pre, post=post}) mark t =
 
 type SS = Gr PTMark PTTrans
 
---- How to pick an arbitrary M from the set Work?
+--- Better way to pick an arbitrary M from the set Work?
 reachabilityGraph :: PTNet -> SS
 reachabilityGraph net = run_ G.empty $ 
                         insMapNodeM (initial net) >> go (Set.singleton (initial net))
@@ -93,10 +93,10 @@ act net m t w =
   
 -- | Additional functionality
 
-postP :: (Eq p, F.Foldable n) => p -> Net p n m -> [Trans]
+postP :: (Eq p, F.Foldable n) => p -> Net p t n m -> [t]
 postP p (Net {trans=trans, pre=preT, post=postT}) = 
   F.foldMap (\x -> if F.any (== p) (preT x) then [x] else []) trans
 
-preP :: (Eq p, F.Foldable n) => p -> Net p n m -> [Trans]
+preP :: (Eq p, F.Foldable n) => p -> Net p t n m -> [t]
 preP p (Net {trans=trans, pre=preT, post=postT}) = 
   F.foldMap (\x -> if F.any (== p) (postT x) then [x] else []) trans

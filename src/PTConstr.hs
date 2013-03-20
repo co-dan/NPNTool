@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeFamilies, TypeSynonymInstances, Rank2Types #-}
+{-# LANGUAGE TypeFamilies, TypeSynonymInstances, RankNTypes #-}
 module PTConstr (
   PTConstr(..), PTConstrM,
   new, run, mkPlace, insPlace, label,

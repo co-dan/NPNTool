@@ -27,12 +27,11 @@ instance F.Foldable (MSExpr v c) where
 
 type Labelling l = Trans -> Maybe l 
 
-data SNet lab var con = 
-  SNet { net :: Net PTPlace (MSExpr var con) MultiSet
-       , elementNets :: [(PTNet, Labelling lab)] -- element nets together with
-         -- transition labelling functions
-       , labelling :: Labelling lab
-       , labels :: Set lab
-         -- place typing function
-       }  
+data SNet lab var con = SNet
+     { net :: Net PTPlace Trans (MSExpr var con) MultiSet
+     , elementNets :: [(PTNet, Labelling lab)] -- element nets together with
+                      -- transition labelling functions
+     , labelling :: Labelling lab
+     , labels :: Set lab
+     }  
 
