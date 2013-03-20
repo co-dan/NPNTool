@@ -8,6 +8,7 @@ import qualified Data.Set as Set
 import qualified Data.MultiSet as MSet
 import Graphviz
 import NPNet
+import PNAction
 
 pn1 :: PTNet
 pn1 = Net { places = Set.fromList [1,2,3,4]
@@ -103,3 +104,26 @@ sn2' = Net { places = Set.fromList [1,2,3,4,5,6]
         x = Var "x" :: Expr String Int
         y = Var "y" :: Expr String Int
   
+pnQ :: PTNet
+pnQ = snd . run' $ do
+  let [t1,t2,t3] = map Trans ["AskQ", "Greet", "Exit"]
+  [p1,p2,p3] <- replicateM 3 mkPlace
+  arc p1 t1
+  arc t1 p2
+  arc p2 t2
+  arc t2 p1
+  arc p1 t3
+  return ()
+
+test1 :: HANet IO
+test1 = HANet
+  { ptnet = pnQ { initial = MSet.fromList [1] }
+  , actions = greeter . read . name
+  }
+
+data Command = AskQ | Greet | Exit  
+             deriving Read
+greeter :: Command -> IO ()  
+greeter AskQ = putStrLn "What is your name?" >> getLine >> return ()
+greeter Greet = putStrLn "Welcome!"
+greeter Exit = putStrLn "Bye"
