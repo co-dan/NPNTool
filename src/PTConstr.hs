@@ -1,13 +1,13 @@
 {-# LANGUAGE TypeFamilies, TypeSynonymInstances, RankNTypes #-}
 module PTConstr (
   PTConstr(..), PTConstrM,
-  new, run, mkPlace, insPlace, label,
+  new, run, runL, mkPlace, insPlace, label,
   inT, outT, inTn, outTn,
   Arc (..), arcn
   ) where
 
 import PetriNet
-import NPNet (SNet, Expr(..))
+import NPNet (SNet, Expr(..), Labelling)
 import qualified NPNet as NPN
 import qualified Data.Map as M
 import Control.Monad
@@ -42,6 +42,8 @@ toPTNet c = Net { places  = p c
   where pre'  t = fromMaybe MSet.empty (M.lookup t (tin c))
         post' t = fromMaybe MSet.empty (M.lookup t (tout c))
 
+toLabelling :: PTConstr l -> Labelling l
+toLabelling c t = M.lookup t (tlab c)
 
 mkPlace :: PTConstrM l Int
 mkPlace = do
@@ -100,3 +102,8 @@ run :: PTConstrM l a -> PTConstr l -> (a, PTNet)
 run c s =
   let (a, s') = runState c s
   in (a, toPTNet s')
+
+runL :: PTConstrM l a -> PTConstr l -> (a, PTNet, Labelling l)
+runL c s =
+  let (a, s') = runState c s
+  in (a, toPTNet s', toLabelling s')

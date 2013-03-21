@@ -7,6 +7,7 @@ import CTL
 import qualified Data.Set as Set
 import qualified Data.MultiSet as MSet
 import Graphviz
+import Bisimilarity
 import NPNet
 import PNAction
 
@@ -127,3 +128,47 @@ greeter :: Command -> IO ()
 greeter AskQ = putStrLn "What is your name?" >> getLine >> return ()
 greeter Greet = putStrLn "Welcome!"
 greeter Exit = putStrLn "Bye"
+
+
+--------------------------------------------------
+
+pn4 :: PTNet
+l4  :: Labelling String
+(_,pn4,l4) = flip runL new $ do
+  let [t1,t2] = map (Trans . show) [1,2]
+  [p1,p2,p3,p4] <- replicateM 4 mkPlace
+  arc p1 t1
+  arc t1 p2
+  label t1 "a"
+  arc p3 t2
+  arc t2 p4
+  label t2 "b"
+  return ()
+
+pn5 :: PTNet
+l5  :: Labelling String
+(_,pn5,l5) = flip runL new $ do
+  let [t1,t2,t3,t4] = map (Trans . show) [1..4]
+  [p0,p1,p2,p3,p4] <- replicateM 5 mkPlace
+  arc p0 t1
+  arc p0 t2
+  label t1 "a"
+  label t2 "b"
+  arc t1 p1
+  arc t2 p3
+
+  arc p1 t3
+  arc t3 p2
+  label t3 "b"
+  arc p3 t4
+  arc t4 p4
+  label t4 "a"
+  return ()
+
+initp4 :: MSet.MultiSet PTPlace
+initp4 = MSet.fromList [1,3]
+
+initp5 :: MSet.MultiSet PTPlace
+initp5 = MSet.fromList [1]
+
+-- runStateT (bisim (pn4,l4) (pn5,l5) (initp4,initp5)) (Set.empty)         
