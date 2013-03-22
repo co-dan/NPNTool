@@ -3,7 +3,8 @@ module PetriNet (
   Net(..), Trans(..), SS,
   PTNet, PTMark, PTTrans, PTPlace,
   HLArc, LLArc, annotate,
-  enabled, fire,
+  enabled, enabledS,
+  fire, fireSequence_, fireSequence,
   reachabilityGraph,
   postP, preP
   ) where
@@ -55,11 +56,21 @@ enabled :: PTNet -> PTMark -> PTTrans -> Bool
 enabled (Net {pre=pre}) marking =
   (`MSet.isSubsetOf` marking)  . pre
 
+enabledS :: PTNet -> PTMark -> Set PTTrans -> Bool
+enabledS (Net {pre=pre}) marking =
+  (`MSet.isSubsetOf` marking) . (F.foldMap pre)
+
 fire :: PTNet -> PTMark -> PTTrans -> PTMark
 fire (Net {pre=pre, post=post}) mark t =
   (mark MSet.\\ pre t) <> post t
 
+fireSequence_ :: PTNet -> PTMark -> [PTTrans] -> PTMark
+fireSequence_ n = foldl (fire n)
 
+fireSequence :: PTNet -> PTMark -> [PTTrans] -> Maybe PTMark
+fireSequence n = F.foldlM (fire' n)
+  where fire' n m t = if enabled n m t then Just (fire n m t) else Nothing
+        
 -- reuse types from StateSpace module
 
 type SS = Gr PTMark PTTrans

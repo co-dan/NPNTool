@@ -4,12 +4,17 @@ import PetriNet
 import PTConstr
 import Control.Monad
 import CTL
+import Data.Set (Set)
 import qualified Data.Set as Set
+import Data.MultiSet (MultiSet)
 import qualified Data.MultiSet as MSet
 import Graphviz
 import Bisimilarity
 import NPNet
 import PNAction
+
+import Data.Monoid
+import qualified Data.Foldable as F
 
 pn1 :: PTNet
 pn1 = Net { places = Set.fromList [1,2,3,4]
@@ -172,3 +177,7 @@ initp5 :: MSet.MultiSet PTPlace
 initp5 = MSet.fromList [1]
 
 -- runStateT (bisim (pn4,l4) (pn5,l5) (initp4,initp5)) (Set.empty)         
+
+isInterchangeable :: PTNet -> PTMark -> Set Trans -> Bool
+isInterchangeable n m ts =
+  getAll $ F.foldMap (All . enabledS n m . (`Set.delete` ts)) ts
