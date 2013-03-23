@@ -20,27 +20,24 @@ member a b (Rel r) = (a,b) `elem` r
 mBisimilarity :: Eq l => (PTNet, Labelling l) -> (PTNet, Labelling l) -> Bool
 mBisimilarity = undefined
 
+isBisim (pn1,l1) (pn2,l2) (m1,m2)  = isJust $ runStateT (bisim (pn1,l1) (pn2,l2) (m1,m2)) (S.empty)         
+
 bisim :: Eq l =>
          (PTNet, Labelling l) -> (PTNet, Labelling l) ->
          (PTMark, PTMark) -> StateT (Set (PTMark,PTMark)) Maybe Bool
 bisim (pt1,l1) (pt2,l2) (m1,m2) = do
   r <- get
-  trace ("Checking " ++ show (m1,m2)) $ return ()
   if S.member (m1,m2) r
     then return True
-    else let ts1 = F.foldMap (\t -> if enabled pt1 m1 t then [t] else []) $ trans pt1
-             ts2 = F.foldMap (\t -> if enabled pt2 m2 t then [t] else []) $ trans pt2
-             ts1' = filter (isJust . l1) ts1
-             ts2' = filter (isJust . l2) ts2
+    else let ts1 = F.foldMap (\t -> guard (enabled pt1 m1 t) >> return t) $ trans pt1
+             ts2 = F.foldMap (\t -> guard (enabled pt2 m2 t) >> return t) $ trans pt2
+             (ts1',silentTs1) = partition (isJust . l1) ts1
+             (ts2',silentTs2) = partition (isJust . l2) ts2
          in do
-           trace ("Ts1' = " ++ show ts1') $ return ()
-           trace ("Ts2' = " ++ show ts2') $ return ()
            put $ S.insert (m1,m2) r
-           r <- get
-           traceShow r $ return ()
-           mapM_ (\t -> mapM_ (existBsim l1 l2 t) ts2') ts1'
-           mapM_ (\t1 -> mapM_ (\t2 -> existBsim l2 l1 t2 t1) ts2') ts1'
-           (return True)
+           mapM_ (\t1 -> msum $ map (existBsim l1 l2 t1) ts2') ts1'
+           mapM_ (\t1 -> msum $ map (\t2 -> existBsim l2 l1 t2 t1) ts1') ts2'
+           return True
   where
     existBsim l1 l2 t1 t2 = do
       guard (l1 t1 == l2 t2)
