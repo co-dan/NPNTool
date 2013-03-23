@@ -1,0 +1,3 @@
+* Generate Haddock documentation for all the modules
+* Write some unit tests
+* Write Arbitrary instance for PTNets and write QuickCheck tests
