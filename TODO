@@ -1,3 +1,8 @@
 * Generate Haddock documentation for all the modules
 * Write some unit tests
 * Write Arbitrary instance for PTNets and write QuickCheck tests
+* M-bisimilarity
+  - test for nets with cycles
+  - finish the check both ways
+  - think of performing the check without statespace
+  - better types?
