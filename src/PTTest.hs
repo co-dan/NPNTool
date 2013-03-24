@@ -139,20 +139,34 @@ greeter Exit = putStrLn "Bye"
 
 pn4 :: PTNet
 l4  :: Labelling String
-(_,pn4,l4) = flip runL new $ do
+(_,pn4',l4) = flip runL new $ do
   let [t1,t2] = map (Trans . (++ "t") . show) [1,2]
   [p1,p2,p3,p4] <- replicateM 4 mkPlace
+  p2' <- mkPlace
+  let t2' = Trans "2t'"
   arc p1 t1
-  arc t1 p2
-  label t1 "a"
+  arc t1 p2'
+  arc p2' t2'
+  arc t2' p2
+  label t2' "a"
+
+  arc p1 (Trans "3t'")
+  arc p3 (Trans "3t'")
+  arc (Trans "3t'") p4
+  label (Trans "3t'") "a"
+          
+  -- arc p1 t1
+  -- arc t1 p2
+  -- label t1 "a"
   arc p3 t2
   arc t2 p4
   label t2 "b"
   return ()
+pn4 = pn4' { initial = initp4 }
 
 pn5 :: PTNet
 l5  :: Labelling String
-(_,pn5,l5) = flip runL new $ do
+(_,pn5',l5) = flip runL new $ do
   let [t1,t2,t3,t4] = map (Trans . (++ "tr") . show ) [1..4]
   [p0,p1,p2,p3,p4] <- replicateM 5 mkPlace
   arc p0 t1
@@ -174,6 +188,8 @@ l5  :: Labelling String
   -- pp <- mkPlace
   -- arc (Trans "5tr") pp
   return ()
+
+pn5 = pn5' { initial = initp5 }
 
 initp4 :: MSet.MultiSet PTPlace
 initp4 = MSet.fromList [1,3]
