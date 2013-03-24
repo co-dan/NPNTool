@@ -3,24 +3,22 @@ module Bisimilarity where
 import NPNet
 import PetriNet
 import Control.Monad.State
-import Control.Monad
+import Control.Monad.Reader
 import Data.List
 import Data.Set (Set)
 import qualified Data.Set as S
 import Data.Maybe
 import qualified Data.Foldable as F
 
+import Data.Graph.Inductive hiding (NodeMap)
+import Data.Graph.Inductive.Query.DFS
+import Data.Tree
+import NodeMap
+
 import Debug.Trace
 
-newtype Rel a b = Rel [(a,b)]
-
-member :: (Eq a, Eq b) => a -> b -> Rel a b -> Bool
-member a b (Rel r) = (a,b) `elem` r
-
-mBisimilarity :: Eq l => (PTNet, Labelling l) -> (PTNet, Labelling l) -> Bool
-mBisimilarity = undefined
-
-isBisim (pn1,l1) (pn2,l2) (m1,m2)  = isJust $ runStateT (bisim (pn1,l1) (pn2,l2) (m1,m2)) (S.empty)         
+isBisim :: Eq l => (PTNet, Labelling l) -> (PTNet, Labelling l) -> (PTMark, PTMark) -> Bool
+isBisim (pn1,l1) (pn2,l2) (m1,m2) = isJust $ runStateT (bisim (pn1,l1) (pn2,l2) (m1,m2)) (S.empty)
 
 bisim :: Eq l =>
          (PTNet, Labelling l) -> (PTNet, Labelling l) ->
@@ -47,3 +45,64 @@ groupByLabel :: (Eq l) => Labelling l -> [Trans] -> [[Trans]]
 groupByLabel _ []     = []
 groupByLabel l (t:ts) = ts1:groupByLabel l ts
   where (ts1,ts2) = partition ((== l t) . l) ts
+
+findPath :: Eq l => (SS, Labelling l) -> NodeMap PTMark -> l -> PTMark -> [PTMark]
+findPath (ss,ll) nm l from =
+  delete from $ concatMap leaves $ findPath' (ss,ll) nm l from
+
+findPath' :: Eq l => (SS, Labelling l) -> NodeMap PTMark -> l -> PTMark -> [Tree PTMark]
+findPath' (ss,ll) nm l from = xdffWith (nextNode ll l) lab' [nodeFromLab from] ss
+  where nodeFromLab :: PTMark -> Node
+        nodeFromLab m = case lookupNode nm m of
+          Just (n,_) -> n
+          Nothing    -> error "Marking not reachable"
+
+leaves :: Tree t -> [t]
+leaves (Node x []) = [x]
+leaves (Node _ ts) = concatMap leaves ts
+
+context4l' :: Context a b -> Adj b 
+context4l' (p,v,_,s) = s++filter ((==v).snd) p
+
+nextNode :: Eq l => Labelling l -> l -> CFun PTMark PTTrans [Node]
+nextNode lab l =
+  map snd . filter (maybe True (==l) . lab . fst) . context4l'
+
+growPath :: (PTNet, Labelling l) -> [PTMark] -> [PTMark]
+growPath (pn,lab) ms = ms ++ 
+  concatMap (\m -> map (fire pn m) (filter (shouldFire m) (S.toList (trans pn)))) ms
+  where shouldFire m t = enabled pn m t && isNothing (lab t)
+
+isMBisim :: Eq l =>
+            (PTNet, Labelling l) -> (PTNet, Labelling l) -> Maybe (Bool, Set (PTMark, PTMark))
+isMBisim (pt1,l1) (pt2,l2) =
+  runReaderT 
+  (runStateT (mBisim (pt1,l1) (pt2,l2) (initial pt1, initial pt2)) S.empty)
+  (swap . reachabilityGraph' $ pt1, swap . reachabilityGraph' $ pt2)
+  where  swap (a,b) = (b,a)
+         
+type SM = (SS, NodeMap PTMark)
+
+mBisim :: Eq l =>
+          (PTNet, Labelling l) -> (PTNet, Labelling l) ->
+          (PTMark, PTMark) -> StateT (Set (PTMark,PTMark)) (ReaderT (SM,SM) Maybe) Bool
+mBisim (pt1,l1) (pt2,l2) (m1,m2) = do
+  r <- get
+  traceShow (m1,m2) $ return ()
+  if S.member (m1,m2) r
+    then return True
+    else let ts1 = F.foldMap (\t -> guard (enabled pt1 m1 t) >> return t) $ trans pt1
+             (ts1',silentTs1) = partition (isJust . l1) ts1
+         in do
+           put $ S.insert (m1,m2) r
+           mapM_ sim ts1'
+           return True
+  where
+    sim t1 = do
+      let l = l1 t1
+          m1' = fire pt1 m1 t1
+      ((ss1,nm1),(ss2,nm2)) <- ask
+      let nodes = growPath (pt2,l2) $ findPath (ss2,l2) nm2 (fromJust l) m2
+      traceShow nodes $ return ()
+      guard (not (null nodes)) -- there exist a ==> m2'
+      mapM_ (\m2' -> mBisim (pt1,l1) (pt2,l2) (m1',m2')) nodes -- all are m-bisimilar

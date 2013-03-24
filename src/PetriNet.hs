@@ -5,7 +5,7 @@ module PetriNet (
   HLArc, LLArc, annotate,
   enabled, enabledS,
   fire, fireSequence_, fireSequence,
-  reachabilityGraph,
+  reachabilityGraph, reachabilityGraph',
   postP, preP
   ) where
 
@@ -77,7 +77,10 @@ type SS = Gr PTMark PTTrans
 
 --- Better way to pick an arbitrary M from the set Work?
 reachabilityGraph :: PTNet -> SS
-reachabilityGraph net = run_ G.empty $ 
+reachabilityGraph = snd. reachabilityGraph'          
+
+reachabilityGraph' :: PTNet -> (NodeMap PTMark, SS)
+reachabilityGraph' net = snd $ run G.empty $ 
                         insMapNodeM (initial net) >> go (Set.singleton (initial net))
   where go work | Set.null work = return ()
                 | otherwise     = do
