@@ -3,7 +3,7 @@ module PTConstr (
   PTConstr(..), PTConstrM,
   new, run, runL, mkPlace, insPlace, label,
   inT, outT, inTn, outTn,
-  Arc (..), arcn
+  Arc (..), arcn, conn
   ) where
 
 import PetriNet
@@ -72,6 +72,20 @@ class Arc k where
 arcn :: Arc k => k -> Co k -> Int -> PTConstrM l ()
 arcn a b n = replicateM_ n $ arc a b
 
+conn :: Show l => PTPlace -> PTPlace -> l -> PTConstrM l ()
+conn p1 p2 l = do
+  t <- getTrans $ Trans ("__t" ++ show l)
+  arc p1 t
+  arc t p2
+  label t l
+
+getTrans :: Trans -> PTConstrM l Trans
+getTrans n = do
+  c <- get
+  if not (M.member n (tlab c))
+    then return n
+    else getTrans (Trans ((name n) ++ "_"))
+  
 instance Arc Trans where  
   type Co Trans = PTPlace
   arc = outT
