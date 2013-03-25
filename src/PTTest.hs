@@ -151,7 +151,7 @@ l4  :: Labelling String
   label t2' "a"
 
   arc p1 (Trans "3t'")
-  arc p3 (Trans "3t'")
+--  arc p3 (Trans "3t'")
   arc (Trans "3t'") p4
   label (Trans "3t'") "a"
           
@@ -197,6 +197,39 @@ initp4 = MSet.fromList [1,3]
 initp5 :: MSet.MultiSet PTPlace
 initp5 = MSet.fromList [1]
 
+pn6 :: PTNet
+l6  :: Labelling String
+(_,pn6',l6) = flip runL new $ do
+  [p1,p2,p3,p4,p5] <- replicateM 5 mkPlace
+  conn p1 p2 "a"
+  conn p2 p3 "a"
+  conn p2 p4 "b"
+  conn p1 p5 "a"
+  return ()
+
+pn6 = pn6' { initial = MSet.fromList [1] }
+
+data L = A | B | C deriving (Show,Eq,Ord)
+
+(_,pn7',l7) = flip runL new $ do
+  [p1,p2,p3] <- replicateM 3 mkPlace
+  conn p1 p2 A
+  conn p2 p3 B
+  conn p3 p2 A
+  return ()
+
+pn7 = pn7' { initial = MSet.fromList [1] }
+      
+(_,pn8',l8) = flip runL new $ do
+  [p1,p2,p3] <- replicateM 3 mkPlace
+  let t = Trans "t1"
+  arc p1 t
+  arc t p3
+  conn p2 p3 B
+  conn p3 p2 A
+  return ()
+
+pn8 = pn8' { initial = MSet.fromList [1] }  
 -- runStateT (bisim (pn4,l4) (pn5,l5) (initp4,initp5)) (Set.empty)         
 
 isInterchangeable :: PTNet -> PTMark -> Set Trans -> Bool

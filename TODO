@@ -6,3 +6,7 @@
   - finish the check both ways
   - think of performing the check without statespace
   - better types?
+* PTConstr
+  - Generate transition names
+  - Make `label' more abstract/general? (Attach labels to positions)
+  - Markings
