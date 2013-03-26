@@ -1,8 +1,11 @@
 {-# LANGUAGE Rank2Types, FlexibleContexts #-}
 module PetriNet (
+  -- * Datatypes
   Net(..), Trans(..), SS,
   PTNet, PTMark, PTTrans, PTPlace,
+  -- * General and abstract functions, opertations
   HLArc, LLArc, annotate,
+  -- * P/T nets sepcific functions
   enabled, enabledS,
   fire, fireSequence_, fireSequence,
   reachabilityGraph, reachabilityGraph',
@@ -30,12 +33,13 @@ data Trans = Trans { name :: String }
 instance Show Trans where
   show = name
 
+-- | A generalized net datatype  
 data Net p t n m = Net 
-     { places :: Set p
-     , trans :: Set t
-     , pre :: t -> n p
-     , post :: t -> n p
-     , initial :: m p
+     { places :: Set p -- ^ A set of places
+     , trans :: Set t -- ^ A set of transitions
+     , pre :: t -> n p -- ^ The pre function
+     , post :: t -> n p -- ^ The post function
+     , initial :: m p -- ^ Initial marking
      }
 
 newtype HLArc a p = Arc { unArc :: (MultiSet (a p)) }
@@ -51,15 +55,19 @@ annotate :: (OrdFunctor a, OrdFunctor n, Ord p, Ord (a p)) =>
 annotate n f g = n { pre = \t -> Compose $ fmap (flip f t) (pre n t) 
                    , post = \t -> Compose $ fmap (g t) (post n t) }
 
-
+-- | Whether some transition is enabled
 enabled :: PTNet -> PTMark -> PTTrans -> Bool
 enabled (Net {pre=pre}) marking =
   (`MSet.isSubsetOf` marking)  . pre
 
+-- | Whether a set of transitions is enabled
+-- Note that there is different then checking whether each
+-- transition in the set is enabled
 enabledS :: PTNet -> PTMark -> Set PTTrans -> Bool
 enabledS (Net {pre=pre}) marking =
   (`MSet.isSubsetOf` marking) . (F.foldMap pre)
 
+-- | The marking after some transitions is fired
 fire :: PTNet -> PTMark -> PTTrans -> PTMark
 fire (Net {pre=pre, post=post}) mark t =
   (mark MSet.\\ pre t) <> post t
