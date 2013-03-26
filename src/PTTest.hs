@@ -12,9 +12,12 @@ import Graphviz
 import Bisimilarity
 import NPNet
 import PNAction
+import Data.Maybe (isJust,isNothing)
 
 import Data.Monoid
 import qualified Data.Foldable as F
+
+import Test.HUnit
 
 pn1 :: PTNet
 pn1 = Net { places = Set.fromList [1,2,3,4]
@@ -121,8 +124,8 @@ pnQ = snd . run' $ do
   arc p1 t3
   return ()
 
-test1 :: HANet IO
-test1 = HANet
+testH1 :: HANet IO
+testH1 = HANet
   { ptnet = pnQ { initial = MSet.fromList [1] }
   , actions = greeter . read . name
   }
@@ -197,6 +200,9 @@ initp4 = MSet.fromList [1,3]
 initp5 :: MSet.MultiSet PTPlace
 initp5 = MSet.fromList [1]
 
+test1 = TestCase $
+        assertBool "pn4 is mbisimilar to pn5" (isJust (isMBisim (pn4,l4) (pn5,l5)))
+
 pn6 :: PTNet
 l6  :: Labelling String
 (_,pn6',l6) = flip runL new $ do
@@ -209,6 +215,9 @@ l6  :: Labelling String
 
 pn6 = pn6' { initial = MSet.fromList [1] }
 
+test2 = TestCase $
+        assertBool "pn6 is not m-bisimilar to itself" (isNothing (isMBisim (pn6,l6) (pn6,l6)))
+                                                       
 data L = A | B | C deriving (Show,Eq,Ord)
 
 (_,pn7',l7) = flip runL new $ do
@@ -230,8 +239,15 @@ pn7 = pn7' { initial = MSet.fromList [1] }
   return ()
 
 pn8 = pn8' { initial = MSet.fromList [1] }  
--- runStateT (bisim (pn4,l4) (pn5,l5) (initp4,initp5)) (Set.empty)         
+
+test3 = TestCase $
+        assertBool "pn7 is m-bisimilar to pn8" (isJust (isMBisim (pn7,l7) (pn8,l8)))
 
 isInterchangeable :: PTNet -> PTMark -> Set Trans -> Bool
 isInterchangeable n m ts =
   getAll $ F.foldMap (All . enabledS n m . (`Set.delete` ts)) ts
+
+
+tests = TestList [ TestLabel "test1" test1
+                 , TestLabel "test2" test2
+                 , TestLabel "test3" test3 ]
