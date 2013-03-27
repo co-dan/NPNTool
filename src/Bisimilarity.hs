@@ -15,8 +15,6 @@ import Data.Graph.Inductive.Query.DFS
 import Data.Tree
 import NodeMap
 
-import Debug.Trace
-
 isBisim :: Eq l => (PTNet, Labelling l) -> (PTNet, Labelling l) -> (PTMark, PTMark) -> Bool
 isBisim (pn1,l1) (pn2,l2) (m1,m2) = isJust $ runStateT (bisim (pn1,l1) (pn2,l2) (m1,m2)) (S.empty)
 

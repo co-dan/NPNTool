@@ -10,6 +10,7 @@ import Data.MultiSet (MultiSet)
 import qualified Data.MultiSet as MSet
 import Graphviz
 import Bisimilarity
+import Liveness
 import NPNet
 import PNAction
 import Data.Maybe (isJust,isNothing)
@@ -201,7 +202,7 @@ initp5 :: MSet.MultiSet PTPlace
 initp5 = MSet.fromList [1]
 
 test1 = TestCase $
-        assertBool "pn4 is mbisimilar to pn5" (isJust (isMBisim (pn4,l4) (pn5,l5)))
+        assertBool "pn4 should be m-bisimilar to pn5" (isJust (isMBisim (pn4,l4) (pn5,l5)))
 
 pn6 :: PTNet
 l6  :: Labelling String
@@ -216,38 +217,87 @@ l6  :: Labelling String
 pn6 = pn6' { initial = MSet.fromList [1] }
 
 test2 = TestCase $
-        assertBool "pn6 is not m-bisimilar to itself" (isNothing (isMBisim (pn6,l6) (pn6,l6)))
+        assertBool "pn6 should NOT be m-bisimilar to itself" (isNothing (isMBisim (pn6,l6) (pn6,l6)))
                                                        
 data L = A | B | C deriving (Show,Eq,Ord)
 
-(_,pn7',l7) = flip runL new $ do
-  [p1,p2,p3] <- replicateM 3 mkPlace
-  conn p1 p2 A
+circ = do
+  p2 <- mkPlace
+  p3 <- mkPlace
   conn p2 p3 B
   conn p3 p2 A
+  return (p2,p3)
+
+(_,pn7',l7) = flip runL new $ do
+  p1 <- mkPlace
+  (p2,_) <- circ
+  conn p1 p2 A
   return ()
 
 pn7 = pn7' { initial = MSet.fromList [1] }
       
 (_,pn8',l8) = flip runL new $ do
-  [p1,p2,p3] <- replicateM 3 mkPlace
+  p1 <- mkPlace
+  (_,p3) <- circ
   let t = Trans "t1"
   arc p1 t
   arc t p3
-  conn p2 p3 B
-  conn p3 p2 A
   return ()
 
 pn8 = pn8' { initial = MSet.fromList [1] }  
 
 test3 = TestCase $
-        assertBool "pn7 is m-bisimilar to pn8" (isJust (isMBisim (pn7,l7) (pn8,l8)))
+        assertBool "pn7 should be m-bisimilar to pn8" (isJust (isMBisim (pn7,l7) (pn8,l8)))
 
 isInterchangeable :: PTNet -> PTMark -> Set Trans -> Bool
 isInterchangeable n m ts =
   getAll $ F.foldMap (All . enabledS n m . (`Set.delete` ts)) ts
 
 
-tests = TestList [ TestLabel "test1" test1
-                 , TestLabel "test2" test2
-                 , TestLabel "test3" test3 ]
+mBisimTests = TestList [ TestLabel "test1" test1
+                       , TestLabel "test2" test2
+                       , TestLabel "test3" test3 ]
+
+
+((a,b,idle),twoProcNet') = run' $ do
+  let pA = Trans "PickA"
+      pB = Trans "PickB"
+      pAB = Trans "PickAB"
+      pBA = Trans "PickBA"
+  [a,b,waitA,waitB,idle] <- replicateM 5 mkPlace
+
+  arc a    pA
+  arc idle pA
+  arc pA waitB
+  arc waitB pAB
+  arc b     pAB
+  arc pAB   b
+  arc pAB   a
+  arc pAB   idle
+
+  arc b    pB
+  arc idle pB
+  arc pB   waitA
+  arc waitA pBA
+  arc a     pBA
+  arc pBA   a
+  arc pBA   idle
+  arc pBA   b
+
+  return (a,b,idle)
+
+twoProcNet1 = twoProcNet' { initial = MSet.fromList [a,b,idle] }
+twoProcNet2 = twoProcNet' { initial = MSet.fromList [a,b,idle,idle] }              
+
+testLive1 = TestCase $
+            assertBool "twoProcNet1 should be live" (isLive ss1 twoProcNet1)
+  where ss1 = reachabilityGraph twoProcNet1
+
+testLive2 = TestCase $
+            assertBool "twoProcNet2 should NOT be live" (not (isLive ss2 twoProcNet2))
+  where ss2 = reachabilityGraph twoProcNet2
+
+        
+livenessTests = TestList [ TestLabel "testLive1" testLive1
+                         , TestLabel "testLive2" testLive2 ]
+        
