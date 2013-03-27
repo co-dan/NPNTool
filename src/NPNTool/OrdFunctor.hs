@@ -1,5 +1,6 @@
 {-# LANGUAGE FlexibleInstances, UndecidableInstances #-}
-module OrdFunctor where
+module NPNTool.OrdFunctor where
+
 import qualified Data.Functor as F
 import Data.Set (Set)
 import qualified Data.Set as Set

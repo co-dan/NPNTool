@@ -1,14 +1,14 @@
 {-# LANGUAGE TypeFamilies, TypeSynonymInstances, RankNTypes #-}
-module PTConstr (
+module NPNTool.PTConstr (
   PTConstr(..), PTConstrM,
   new, run, runL, mkPlace, insPlace, label,
   inT, outT, inTn, outTn,
   Arc (..), arcn, conn
   ) where
 
-import PetriNet
-import NPNet (SNet, Expr(..), Labelling)
-import qualified NPNet as NPN
+import NPNTool.PetriNet
+import NPNTool.NPNet (SNet, Expr(..), Labelling)
+import qualified NPNTool.NPNet as NPN
 import qualified Data.Map as M
 import Control.Monad
 import Control.Monad.State

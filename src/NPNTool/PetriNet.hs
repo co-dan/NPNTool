@@ -1,5 +1,5 @@
 {-# LANGUAGE Rank2Types, FlexibleContexts #-}
-module PetriNet (
+module NPNTool.PetriNet (
   -- * Datatypes
   Net(..), Trans(..), SS,
   PTNet, PTMark, PTTrans, PTPlace,
@@ -13,7 +13,7 @@ module PetriNet (
   ) where
 
 import Prelude hiding (fmap)
-import OrdFunctor
+import NPNTool.OrdFunctor
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.MultiSet (MultiSet)
@@ -24,7 +24,7 @@ import Data.Functor.Compose
 import Data.Graph.Inductive (Gr)
 import qualified Data.Graph.Inductive as G
 --import Data.Graph.Inductive.NodeMap
-import NodeMap
+import NPNTool.NodeMap
 import qualified Data.Foldable as F
 
 data Trans = Trans { name :: String }

@@ -1,24 +1,27 @@
-module PTTest where
+-- Main test suite
+module Main where
 
-import PetriNet
-import PTConstr
+import qualified Test.HUnit as H
+import System.Exit (exitFailure)
+
+import NPNTool.PetriNet
+import NPNTool.PTConstr
+import NPNTool.Graphviz
+import NPNTool.Bisimilarity
+import NPNTool.Liveness
+import NPNTool.NPNet
+import NPNTool.CTL
+
 import Control.Monad
-import CTL
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.MultiSet (MultiSet)
 import qualified Data.MultiSet as MSet
-import Graphviz
-import Bisimilarity
-import Liveness
-import NPNet
-import PNAction
 import Data.Maybe (isJust,isNothing)
 
 import Data.Monoid
 import qualified Data.Foldable as F
 
-import Test.HUnit
 
 pn1 :: PTNet
 pn1 = Net { places = Set.fromList [1,2,3,4]
@@ -64,11 +67,6 @@ pn3 = snd . run' $ do
   arc t3 p1
   return ()
   
-atom :: [Int] -> CTL
-atom a = CTLAtom (show (MSet.fromList a), (==MSet.fromList a))
-
-formula :: CTL
-formula = ef (CTLOr (atom [2,2,3,4]) (atom [3,3,4,4]))
 
 sn1 :: SNet String String PTPlace
 sn1 = SNet { net = sn1'
@@ -114,29 +112,29 @@ sn2' = Net { places = Set.fromList [1,2,3,4,5,6]
         x = Var "x" :: Expr String Int
         y = Var "y" :: Expr String Int
   
-pnQ :: PTNet
-pnQ = snd . run' $ do
-  let [t1,t2,t3] = map Trans ["AskQ", "Greet", "Exit"]
-  [p1,p2,p3] <- replicateM 3 mkPlace
-  arc p1 t1
-  arc t1 p2
-  arc p2 t2
-  arc t2 p1
-  arc p1 t3
-  return ()
+-- pnQ :: PTNet
+-- pnQ = snd . run' $ do
+--   let [t1,t2,t3] = map Trans ["AskQ", "Greet", "Exit"]
+--   [p1,p2,p3] <- replicateM 3 mkPlace
+--   arc p1 t1
+--   arc t1 p2
+--   arc p2 t2
+--   arc t2 p1
+--   arc p1 t3
+--   return ()
 
-testH1 :: HANet IO
-testH1 = HANet
-  { ptnet = pnQ { initial = MSet.fromList [1] }
-  , actions = greeter . read . name
-  }
+-- testH1 :: HANet IO
+-- testH1 = HANet
+--   { ptnet = pnQ { initial = MSet.fromList [1] }
+--   , actions = greeter . read . name
+--   }
 
-data Command = AskQ | Greet | Exit  
-             deriving Read
-greeter :: Command -> IO ()  
-greeter AskQ = putStrLn "What is your name?" >> getLine >> return ()
-greeter Greet = putStrLn "Welcome!"
-greeter Exit = putStrLn "Bye"
+-- data Command = AskQ | Greet | Exit  
+--              deriving Read
+-- greeter :: Command -> IO ()  
+-- greeter AskQ = putStrLn "What is your name?" >> getLine >> return ()
+-- greeter Greet = putStrLn "Welcome!"
+-- greeter Exit = putStrLn "Bye"
 
 
 --------------------------------------------------
@@ -201,8 +199,7 @@ initp4 = MSet.fromList [1,3]
 initp5 :: MSet.MultiSet PTPlace
 initp5 = MSet.fromList [1]
 
-test1 = TestCase $
-        assertBool "pn4 should be m-bisimilar to pn5" (isJust (isMBisim (pn4,l4) (pn5,l5)))
+test1 = H.assertBool "pn4 should be m-bisimilar to pn5" (isJust (isMBisim (pn4,l4) (pn5,l5)))
 
 pn6 :: PTNet
 l6  :: Labelling String
@@ -216,8 +213,7 @@ l6  :: Labelling String
 
 pn6 = pn6' { initial = MSet.fromList [1] }
 
-test2 = TestCase $
-        assertBool "pn6 should NOT be m-bisimilar to itself" (isNothing (isMBisim (pn6,l6) (pn6,l6)))
+test2 = H.assertBool "pn6 should NOT be m-bisimilar to itself" (isNothing (isMBisim (pn6,l6) (pn6,l6)))
                                                        
 data L = A | B | C deriving (Show,Eq,Ord)
 
@@ -246,17 +242,16 @@ pn7 = pn7' { initial = MSet.fromList [1] }
 
 pn8 = pn8' { initial = MSet.fromList [1] }  
 
-test3 = TestCase $
-        assertBool "pn7 should be m-bisimilar to pn8" (isJust (isMBisim (pn7,l7) (pn8,l8)))
+test3 = H.assertBool "pn7 should be m-bisimilar to pn8" (isJust (isMBisim (pn7,l7) (pn8,l8)))
 
 isInterchangeable :: PTNet -> PTMark -> Set Trans -> Bool
 isInterchangeable n m ts =
   getAll $ F.foldMap (All . enabledS n m . (`Set.delete` ts)) ts
 
 
-mBisimTests = TestList [ TestLabel "test1" test1
-                       , TestLabel "test2" test2
-                       , TestLabel "test3" test3 ]
+mBisimTests = H.TestList [ H.TestLabel "test1" (H.TestCase test1)
+                         , H.TestLabel "test2" (H.TestCase test2)
+                         , H.TestLabel "test3" (H.TestCase test3) ]
 
 
 ((a,b,idle),twoProcNet') = run' $ do
@@ -289,15 +284,17 @@ mBisimTests = TestList [ TestLabel "test1" test1
 twoProcNet1 = twoProcNet' { initial = MSet.fromList [a,b,idle] }
 twoProcNet2 = twoProcNet' { initial = MSet.fromList [a,b,idle,idle] }              
 
-testLive1 = TestCase $
-            assertBool "twoProcNet1 should be live" (isLive ss1 twoProcNet1)
+testLive1 = H.assertBool "twoProcNet1 should be live" (isLive ss1 twoProcNet1)
   where ss1 = reachabilityGraph twoProcNet1
 
-testLive2 = TestCase $
-            assertBool "twoProcNet2 should NOT be live" (not (isLive ss2 twoProcNet2))
+testLive2 = H.assertBool "twoProcNet2 should NOT be live" (not (isLive ss2 twoProcNet2))
   where ss2 = reachabilityGraph twoProcNet2
 
         
-livenessTests = TestList [ TestLabel "testLive1" testLive1
-                         , TestLabel "testLive2" testLive2 ]
+livenessTests = H.TestList [ H.TestLabel "Liveness test 1" (H.TestCase testLive1)
+                           , H.TestLabel "Liveness test 2" (H.TestCase testLive2) ]
         
+
+main = do
+  c <- H.runTestTT $ H.TestList [mBisimTests, livenessTests]
+  when (H.errors c > 0 || H.failures c > 0) exitFailure

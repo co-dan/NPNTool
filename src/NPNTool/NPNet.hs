@@ -1,9 +1,9 @@
-module NPNet (
+module NPNTool.NPNet (
   Expr(..), vars, MSExpr(..),
   Labelling, SNet(..), 
   ) where
 
-import PetriNet
+import NPNTool.PetriNet
 import Data.Set (Set)
 import Data.MultiSet (MultiSet)
 import qualified Data.Foldable as F

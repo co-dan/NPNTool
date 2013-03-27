@@ -1,6 +1,6 @@
-module Graphviz (drawPT) where
+module NPNTool.Graphviz (drawPT) where
 
-import PetriNet
+import NPNTool.PetriNet
 import Data.Set (Set)
 import qualified Data.Set as S
 import Data.Foldable (Foldable)

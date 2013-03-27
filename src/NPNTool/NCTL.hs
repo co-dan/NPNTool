@@ -1,5 +1,5 @@
 {-# LANGUAGE FlexibleInstances #-}
-module NCTL where
+module NPNTool.NCTL where
 
 import Data.Graph.Inductive
 

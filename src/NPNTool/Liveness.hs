@@ -1,7 +1,7 @@
-module Liveness where
+module NPNTool.Liveness where
 
-import NPNet
-import PetriNet
+import NPNTool.NPNet
+import NPNTool.PetriNet
 import Control.Monad.State
 import Control.Monad.Reader
 import Data.List
@@ -13,7 +13,7 @@ import qualified Data.Foldable as F
 import Data.Graph.Inductive hiding (NodeMap)
 import Data.Graph.Inductive.Query.DFS
 import Data.Tree
-import NodeMap
+import NPNTool.NodeMap
 
 isTerminal :: Graph gr => gr a b -> [Node] -> Bool
 isTerminal g ns = all (not . hasOut . (flip match g)) ns

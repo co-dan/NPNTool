@@ -3,7 +3,7 @@
 
 name:                nctlmodelchecker
 version:             0.1.0.0
-synopsis:            A simple model checker for nCTL
+synopsis:            A simple model checker for nCTL and a general support tool for NP-nets
 -- description:         
 license:             BSD3
 license-file:        LICENSE
@@ -14,10 +14,18 @@ maintainer:          difrumin@gmail.com
 build-type:          Simple
 cabal-version:       >=1.8
 
-executable nctlmodelchecker
-  main-is:             Main.hs
-  hs-source-dirs:      src/
-  other-modules:       PTTest, PetriNet
+Library 
+  Exposed-modules:     NPNTool.PetriNet,
+                       NPNTool.CTL,
+                       NPNTool.Bisimilarity,
+                       NPNTool.AlphaTrail,
+                       NPNTool.Liveness,
+                       NPNTool.Graphviz,
+                       NPNTool.NPNet,
+                       NPNTool.PTConstr
+  hs-source-dirs:      src/   
+  other-modules:       NPNTool.NodeMap
+                       
   build-depends:       base ==4.5.*,
                        fgl ==5.4.2.*,
                        mtl ==2.1.*,
@@ -25,6 +33,25 @@ executable nctlmodelchecker
                        containers >=0.5,
                        multiset ==0.2.2,
                        text ==0.11.*,
-                       hxt ==9.3.*,
-                       HUnit ==1.2.5.*,
+                       -- hxt ==9.3.*,
                        random ==1.0.*
+                       
+
+executable nctlmodelchecker
+  main-is:             Main.hs
+  hs-source-dirs:      startup/
+  build-depends:       base ==4.5.*,
+                       multiset ==0.2.2,    
+                       containers >=0.5, 
+                       nctlmodelchecker
+
+Test-Suite general-tests
+  type:                exitcode-stdio-1.0
+  hs-source-dirs:      tests/
+  main-is:             Main.hs
+  build-depends:       base ==4.5.*,
+                       multiset ==0.2.2,    
+                       containers >=0.5,
+                       nctlmodelchecker,
+                       HUnit ==1.2.5.*
+
