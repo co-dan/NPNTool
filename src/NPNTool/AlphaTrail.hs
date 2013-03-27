@@ -1,10 +1,10 @@
-module AlphaTrail (
+module NPNTool.AlphaTrail (
   alphaTrail
   ) where
 
-import PetriNet
-import NPNet
-import PTConstr
+import NPNTool.PetriNet
+import NPNTool.NPNet
+import NPNTool.PTConstr
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Maybe (fromJust)

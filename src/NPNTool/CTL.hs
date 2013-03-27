@@ -1,5 +1,5 @@
 {-# LANGUAGE FlexibleInstances #-}
-module CTL (verifyPT, CTL(..), ef,af,eg,ag) where
+module NPNTool.CTL (verifyPT, CTL(..), ef,af,eg,ag) where
 -- CTL model checker
 
 import Control.Monad
@@ -7,9 +7,9 @@ import Control.Monad.State
 import Data.Maybe (fromJust)
 import qualified Data.Map as M
 import Data.Graph.Inductive
-import PetriNet
+import NPNTool.PetriNet
 -- import NCTL
-import StateSpace hiding (SS, succSt)
+import NPNTool.StateSpace hiding (SS, succSt)
 
 data CTL =
   CTLFalse

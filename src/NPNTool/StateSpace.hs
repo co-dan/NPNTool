@@ -1,5 +1,5 @@
 {-# LANGUAGE FlexibleInstances #-}
-module StateSpace where
+module NPNTool.StateSpace where
 
 import Data.Graph.Inductive
 -- import Data.GraphViz
@@ -8,7 +8,7 @@ import Data.Graph.Inductive
 import qualified Data.Text as T
 import qualified Data.Map as M
 import Data.Maybe (fromMaybe)
-import NCTL
+import NPNTool.NCTL
 
 -- | Statespace
 type SS a = (Gr a a, M.Map Edge (NTrans a), [ET])

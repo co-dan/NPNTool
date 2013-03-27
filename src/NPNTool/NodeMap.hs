@@ -1,5 +1,5 @@
 {-# LANGUAGE TupleSections #-}
-module NodeMap(
+module NPNTool.NodeMap(
     -- * Functional Construction
     NodeMap,
     -- ** Map Construction

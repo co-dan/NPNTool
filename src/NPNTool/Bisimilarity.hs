@@ -1,7 +1,9 @@
-module Bisimilarity where
+module NPNTool.Bisimilarity where
 
-import NPNet
-import PetriNet
+import NPNTool.NPNet
+import NPNTool.PetriNet
+import NPNTool.NodeMap
+
 import Control.Monad.State
 import Control.Monad.Reader
 import Data.List
@@ -13,7 +15,6 @@ import qualified Data.Foldable as F
 import Data.Graph.Inductive hiding (NodeMap)
 import Data.Graph.Inductive.Query.DFS
 import Data.Tree
-import NodeMap
 
 isBisim :: Eq l => (PTNet, Labelling l) -> (PTNet, Labelling l) -> (PTMark, PTMark) -> Bool
 isBisim (pn1,l1) (pn2,l2) (m1,m2) = isJust $ runStateT (bisim (pn1,l1) (pn2,l2) (m1,m2)) (S.empty)
