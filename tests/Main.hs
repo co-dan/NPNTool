@@ -234,8 +234,8 @@ pn7 = pn7' { initial = MSet.fromList [1] }
       
 (_,pn8',l8) = flip runL new $ do
   p1 <- mkPlace
+  t <- mkTrans
   (_,p3) <- circ
-  let t = Trans "t1"
   arc p1 t
   arc t p3
   return ()

@@ -5,7 +5,8 @@ module NPNTool.PTConstr (
   -- * Operations
   new,
   -- * Monadic interface
-  run, runL, mkPlace, insPlace, label,
+  run, runL,
+  mkPlace, insPlace, mkTrans, label,
   inT, outT, inTn, outTn,
   -- * Generalized arcs
   Arc (..), arcn, conn
@@ -26,7 +27,7 @@ import Data.Maybe (fromMaybe)
 -- | Datatype for dynamically constructing Petri Nets  
 data PTConstr l =
   PTConstr
-  { p     :: Set PTPlace, key :: Int
+  { p     :: Set PTPlace, key :: Int, keyT :: Int
   , tin   :: M.Map Trans (MultiSet PTPlace)
   , tout  :: M.Map Trans (MultiSet PTPlace)
   , tlab  :: M.Map Trans l
@@ -36,7 +37,7 @@ type PTConstrM l = State (PTConstr l)
 
 -- | New (empty) @PTConstr@                   
 new :: forall l. PTConstr l                   
-new = PTConstr { p = Set.empty, key = 1, tin = M.empty, tout = M.empty, tlab = M.empty }
+new = PTConstr { p = Set.empty, key = 1, keyT = 1, tin = M.empty, tout = M.empty, tlab = M.empty }
 
 toPTNet :: forall l. PTConstr l -> PTNet
 toPTNet c = Net { places  = p c
@@ -69,6 +70,14 @@ insPlace newP = do
   let p' = p c
   put $ c {p = Set.insert newP p'}
 
+-- | Creates a new transition not yet present in the net
+mkTrans :: PTConstrM l Trans
+mkTrans = do
+  c <- get
+  let keyT' = keyT c
+  put $ c { keyT = keyT' + 1 }
+  return $ Trans ("t" ++ show keyT')
+  
 -- | Specifies a label for some transition  
 label :: Trans -> l -> PTConstrM l ()
 label t lab = do
@@ -90,18 +99,11 @@ arcn a b n = replicateM_ n $ arc a b
 -- Might be useful for specifying workflow nets
 conn :: Show l => PTPlace -> PTPlace -> l -> PTConstrM l ()
 conn p1 p2 l = do
-  t <- getTrans $ Trans ("__t" ++ show l)
+  t <- mkTrans
   arc p1 t
   arc t p2
   label t l
 
-getTrans :: Trans -> PTConstrM l Trans
-getTrans n = do
-  c <- get
-  if not (M.member n (tlab c))
-    then return n
-    else getTrans (Trans ((name n) ++ "_"))
-  
 instance Arc Trans where  
   type Co Trans = PTPlace
   arc = outT
