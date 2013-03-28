@@ -5,7 +5,7 @@ module NPNTool.PetriNet (
   PTNet, PTMark, PTTrans, PTPlace,
   -- * General and abstract functions, opertations
   HLArc, LLArc, annotate,
-  -- * P/T nets sepcific functions
+  -- * P/T nets specific functions
   enabled, enabledS,
   fire, fireSequence_, fireSequence,
   reachabilityGraph, reachabilityGraph',
