@@ -1,8 +1,13 @@
 {-# LANGUAGE TypeFamilies, TypeSynonymInstances, RankNTypes #-}
 module NPNTool.PTConstr (
+  -- * Datatypes
   PTConstr(..), PTConstrM,
-  new, run, runL, mkPlace, insPlace, label,
+  -- * Operations
+  new,
+  -- * Monadic interface
+  run, runL, mkPlace, insPlace, label,
   inT, outT, inTn, outTn,
+  -- * Generalized arcs
   Arc (..), arcn, conn
   ) where
 
@@ -18,6 +23,7 @@ import Data.MultiSet (MultiSet)
 import qualified Data.MultiSet as MSet
 import Data.Maybe (fromMaybe)  
 
+-- | Datatype for dynamically constructing Petri Nets  
 data PTConstr l =
   PTConstr
   { p     :: Set PTPlace, key :: Int
@@ -28,6 +34,7 @@ data PTConstr l =
   
 type PTConstrM l = State (PTConstr l)
 
+-- | New (empty) @PTConstr@                   
 new :: forall l. PTConstr l                   
 new = PTConstr { p = Set.empty, key = 1, tin = M.empty, tout = M.empty, tlab = M.empty }
 
@@ -45,7 +52,8 @@ toPTNet c = Net { places  = p c
 toLabelling :: PTConstr l -> Labelling l
 toLabelling c t = M.lookup t (tlab c)
 
-mkPlace :: PTConstrM l Int
+-- | Creates a new place not yet present in the net
+mkPlace :: PTConstrM l PTPlace
 mkPlace = do
   c <- get
   let key' = key c
@@ -53,25 +61,33 @@ mkPlace = do
   put $ c {p = Set.insert key' p', key = key' + 1}
   return key'
 
+-- | Inserts an existing place in the net
+-- Does nothing if the place is already present
 insPlace :: PTPlace -> PTConstrM l ()
 insPlace newP = do
   c <- get
   let p' = p c
   put $ c {p = Set.insert newP p'}
 
+-- | Specifies a label for some transition  
 label :: Trans -> l -> PTConstrM l ()
 label t lab = do
   c <- get
   let tlab' = tlab c
   put $ c {tlab = M.insert t lab tlab'}
   
+-- | Generalized arc class
 class Arc k where
   type Co k :: *
+  -- | Specifies an arc from some object to its co-object
   arc :: k -> Co k -> PTConstrM l ()
 
+-- | Specifies @n@ arcs  
 arcn :: Arc k => k -> Co k -> Int -> PTConstrM l ()
 arcn a b n = replicateM_ n $ arc a b
 
+-- | Directly connects two places via an intermediate transition
+-- Might be useful for specifying workflow nets
 conn :: Show l => PTPlace -> PTPlace -> l -> PTConstrM l ()
 conn p1 p2 l = do
   t <- getTrans $ Trans ("__t" ++ show l)
@@ -93,7 +109,7 @@ instance Arc Trans where
 instance Arc PTPlace where  
   type Co PTPlace = Trans
   arc = inT
-  
+
 inT :: PTPlace -> Trans -> PTConstrM l ()
 inT p t = do
   c <- get
@@ -112,11 +128,14 @@ inTn p t n = replicateM_ n $ inT p t
 outTn :: Trans -> PTPlace -> Int -> PTConstrM l ()
 outTn t p n = replicateM_ n $ outT t p
 
+-- | Runs a @PTConstrM@ monad and returns a Petri Net together with a result              
 run :: PTConstrM l a -> PTConstr l -> (a, PTNet)
 run c s =
   let (a, s') = runState c s
   in (a, toPTNet s')
 
+-- | Runs a @PTConstrM@ monad and returns a Petri Net together with its labelling
+-- and a result
 runL :: PTConstrM l a -> PTConstr l -> (a, PTNet, Labelling l)
 runL c s =
   let (a, s') = runState c s
