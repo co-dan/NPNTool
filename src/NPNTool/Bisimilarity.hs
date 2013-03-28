@@ -1,4 +1,6 @@
-module NPNTool.Bisimilarity where
+module NPNTool.Bisimilarity (
+  isBisim,
+  isMBisim) where
 
 import NPNTool.NPNet
 import NPNTool.PetriNet
@@ -13,9 +15,9 @@ import Data.Maybe
 import qualified Data.Foldable as F
 
 import Data.Graph.Inductive hiding (NodeMap)
-import Data.Graph.Inductive.Query.DFS
 import Data.Tree
 
+-- | Strong bisimulation
 isBisim :: Eq l => (PTNet, Labelling l) -> (PTNet, Labelling l) -> (PTMark, PTMark) -> Bool
 isBisim (pn1,l1) (pn2,l2) (m1,m2) = isJust $ runStateT (bisim (pn1,l1) (pn2,l2) (m1,m2)) (S.empty)
 
@@ -73,8 +75,9 @@ growPath (pn,lab) ms = ms ++
   concatMap (\m -> map (fire pn m) (filter (shouldFire m) (S.toList (trans pn)))) ms
   where shouldFire m t = enabled pn m t && isNothing (lab t)
 
--- isMBisim :: Eq l =>
---             (PTNet, Labelling l) -> (PTNet, Labelling l) -> Maybe (Bool, Set (PTMark, PTMark))
+-- | Whether two Petri Net are m-bisimilar
+isMBisim :: Eq l =>
+            (PTNet, Labelling l) -> (PTNet, Labelling l) -> Maybe (Bool, Set (PTMark, PTMark))
 isMBisim (pt1,l1) (pt2,l2) =
   runReaderT 
   (runStateT (mBisim (pt1,l1) (pt2,l2) (initial pt1, initial pt2)) S.empty)
@@ -83,7 +86,7 @@ isMBisim (pt1,l1) (pt2,l2) =
          
 type SM = (SS, NodeMap PTMark)
 
-mBisim :: (Show l, Eq l) =>
+mBisim :: Eq l =>
           (PTNet, Labelling l) -> (PTNet, Labelling l) ->
           (PTMark, PTMark) -> StateT (Set (PTMark,PTMark)) (ReaderT (SM,SM) Maybe) Bool
 mBisim (pt1,l1) (pt2,l2) (m1,m2) = do

@@ -1,3 +1,4 @@
+-- | Simple module for producing Graphviz diagrams of Petri Nets
 module NPNTool.Graphviz (drawPT) where
 
 import NPNTool.PetriNet
@@ -17,7 +18,7 @@ showPost :: (Show p, Foldable n) => Net p Trans n m -> Trans -> String
 showPost (Net {post=post}) t =
   F.concatMap (\x -> "\"" ++ show t ++ "\" -> " ++ show x ++ "; ") (post t)
 
-
+-- | Draw a P/T-net
 drawPT :: (Show p, Foldable n) => Net p Trans n m -> String
 drawPT net = 
   unlines 
