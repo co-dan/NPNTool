@@ -1,6 +1,15 @@
 {-# LANGUAGE FlexibleInstances #-}
-module NPNTool.CTL (verifyPT, CTL(..), ef,af,eg,ag) where
--- CTL model checker
+-- | A simple CTL model checker
+module NPNTool.CTL (
+  -- * CTL
+  CTL(..),
+  -- ** Additional operators
+  ef,af,eg,ag,
+  -- * Verification
+  verifyPT,
+  -- * Helper functions
+  orElse, andThen
+  ) where
 
 import Control.Monad
 import Control.Monad.State
@@ -10,7 +19,9 @@ import Data.Graph.Inductive
 import NPNTool.PetriNet
 -- import NCTL
 import NPNTool.StateSpace hiding (SS, succSt)
+import NPNTool.NodeMap
 
+-- | CTL datatype  
 data CTL =
   CTLFalse
   | CTLTrue
@@ -49,8 +60,7 @@ eg f = CTLNot $ af (CTLNot f)
 ag f = CTLNot $ ef (CTLNot f)             
 
 
--- | Helper functions
--- The usual liftM2 f won't work here, we need a left-biased version
+-- | The usual liftM2 f won't work here, we need a left-biased version
 orElse, andThen :: Monad m => m Bool -> m Bool -> m Bool
 orElse a b = do
   r <- a
@@ -76,14 +86,15 @@ succSt :: SS -> Obj -> [Obj]
 succSt g (Left s) = map toState $ suc g s
 succSt g (Right (_,s)) = [toState s]
 
--- | CTL verification w/ memoization
+
 
 type Verif = State (M.Map (Obj,CTL) Bool) Bool
 
+-- | CTL verification w/ memoization
 verifyPT :: PTNet -> CTL -> (Bool, M.Map (Obj, CTL) Bool)
 verifyPT net f = runState (verifyF' f ss (toState s)) M.empty
-  where ss = reachabilityGraph net
-        s  = 1 -- look up (initial net)
+  where (nm,ss) = reachabilityGraph' net
+        (s,_)  = fromJust $ lookupNode nm (initial net)
 
 verifyF' :: CTL -> SS -> Obj -> Verif
 verifyF' f ss s = do

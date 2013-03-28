@@ -1,19 +1,12 @@
-module NPNTool.Liveness where
+module NPNTool.Liveness (
+  isLive) where
 
-import NPNTool.NPNet
 import NPNTool.PetriNet
-import Control.Monad.State
-import Control.Monad.Reader
-import Data.List
 import Data.Set (Set)
 import qualified Data.Set as S
-import Data.Maybe
-import qualified Data.Foldable as F
 
 import Data.Graph.Inductive hiding (NodeMap)
 import Data.Graph.Inductive.Query.DFS
-import Data.Tree
-import NPNTool.NodeMap
 
 isTerminal :: Graph gr => gr a b -> [Node] -> Bool
 isTerminal g ns = all (not . hasOut . (flip match g)) ns
@@ -26,6 +19,7 @@ everyTrans ss tr (n:ns) =
   let tr' = foldl (\acc t -> S.delete (snd t) acc) tr (lsuc ss n)
   in everyTrans ss tr' ns
 
+-- | Whether a Petri Net is live (based on its reachability graph)
 isLive :: SS -> PTNet -> Bool
 isLive ss pn = all (\c -> not (isTerminal ss c) || everyTrans ss (trans pn) c) (scc ss)
 

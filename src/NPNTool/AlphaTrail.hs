@@ -13,6 +13,7 @@ import Control.Monad
 import Control.Monad.State
 import qualified Data.Foldable as F
 
+-- | Generate an alpha-trail net for a specific place in a SNet
 alphaTrail :: Eq v => SNet l v c -> PTPlace -> PTNet
 alphaTrail n p = snd $ run (evalStateT (aTrail n) (Set.singleton p,Set.empty)) init
   where init = new { p = Set.singleton p, key = p+1 }

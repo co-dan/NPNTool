@@ -22,9 +22,12 @@ Library
                        NPNTool.Liveness,
                        NPNTool.Graphviz,
                        NPNTool.NPNet,
-                       NPNTool.PTConstr
+                       NPNTool.PTConstr,
+                       NPNTool.StateSpace,
+                       NPNTool.NodeMap        
   hs-source-dirs:      src/   
-  other-modules:       NPNTool.NodeMap
+  other-modules:       NPNTool.NCTL,
+                       NPNTool.ModelChecker
                        
   build-depends:       base ==4.5.*,
                        fgl ==5.4.2.*,

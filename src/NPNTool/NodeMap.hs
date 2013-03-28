@@ -1,4 +1,6 @@
 {-# LANGUAGE TupleSections #-}
+-- | Because Data.Graph.Inductive.NodeMap doesn't let you inspect
+-- your nodes. Most of the code is reused from the fgl library
 module NPNTool.NodeMap(
     -- * Functional Construction
     NodeMap,
@@ -27,9 +29,6 @@ module NPNTool.NodeMap(
     insMapEdgesM, delMapNodesM, delMapEdgesM
 ) where
  
--- Because Data.Graph.Inductive.NodeMap doesn't let you inspect
--- your nodes. Most of the code is reused from the fgl library
-
 import Prelude hiding (map)
 import qualified Prelude as P (map)
 import Control.Monad.State

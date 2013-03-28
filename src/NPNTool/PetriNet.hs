@@ -12,8 +12,7 @@ module NPNTool.PetriNet (
   postP, preP
   ) where
 
-import Prelude hiding (fmap)
-import NPNTool.OrdFunctor
+import Prelude
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.MultiSet (MultiSet)
@@ -50,7 +49,7 @@ type PTTrans = Trans
 type PTPlace = Int
 
 -- | Annotate net using additional functors of place/transition relationship
-annotate :: (OrdFunctor a, OrdFunctor n, Ord p, Ord (a p)) => 
+annotate :: (Functor a, Functor n) => 
               Net p t n m -> (p -> t -> a p) -> (t -> p -> a p) -> Net p t (Compose n a) m
 annotate n f g = n { pre = \t -> Compose $ fmap (flip f t) (pre n t) 
                    , post = \t -> Compose $ fmap (g t) (post n t) }
@@ -83,16 +82,19 @@ fireSequence n = F.foldlM (fire' n)
 
 type SS = Gr PTMark PTTrans
 
---- Better way to pick an arbitrary M from the set Work?
+
+-- | The reachability graph of a Petri Net
 reachabilityGraph :: PTNet -> SS
 reachabilityGraph = snd. reachabilityGraph'          
 
+-- | The reachability graph of a Petri Net together with a 'NodeMap'                    
 reachabilityGraph' :: PTNet -> (NodeMap PTMark, SS)
 reachabilityGraph' net = snd $ run G.empty $ 
                         insMapNodeM (initial net) >> go (Set.singleton (initial net))
   where go work | Set.null work = return ()
                 | otherwise     = do
-          let m = (head . Set.toList) work 
+          let m = (head . Set.toList) work
+                  --- Better way to pick an arbitrary M from the set Work?
               work' = Set.delete m work
           work'' <- F.foldrM (act net m) work' (trans net)
           go work'' 
@@ -113,12 +115,12 @@ act net m t w =
      return w'
   else return w
   
--- | Additional functionality
-
+-- | Post-transitions of a place
 postP :: (Eq p, F.Foldable n) => p -> Net p t n m -> [t]
 postP p (Net {trans=trans, pre=preT, post=postT}) = 
   F.foldMap (\x -> if F.any (== p) (preT x) then [x] else []) trans
 
+-- | Pre-transitions of a place  
 preP :: (Eq p, F.Foldable n) => p -> Net p t n m -> [t]
 preP p (Net {trans=trans, pre=preT, post=postT}) = 
   F.foldMap (\x -> if F.any (== p) (postT x) then [x] else []) trans

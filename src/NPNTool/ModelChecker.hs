@@ -1,10 +1,11 @@
 {-# LANGUAGE TypeOperators,ScopedTypeVariables #-}
-module ModelChecker where
+-- | A simple NCTL model checker
+module NPNTool.ModelChecker where
 
 import Data.Graph.Inductive
 import Data.Maybe (fromJust)
-import StateSpace
-import NCTL
+import NPNTool.StateSpace
+import NPNTool.NCTL
 import Data.Function
 import Debug.Trace  
 import Data.List
