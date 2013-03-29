@@ -10,4 +10,5 @@
   - Markings
 * NPConstr
   - toSArc function: change to make use of possible monoidal structure of SArc?
-  
+* XMLReader
+  - idToPlace and idToTrans are too ugly
