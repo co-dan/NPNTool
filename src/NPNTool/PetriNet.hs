@@ -26,7 +26,7 @@ import qualified Data.Graph.Inductive as G
 import NPNTool.NodeMap
 import qualified Data.Foldable as F
 
-data Trans = Trans { name :: String }
+newtype Trans = Trans { name :: String }
            deriving (Eq,Ord)
                       
 instance Show Trans where
