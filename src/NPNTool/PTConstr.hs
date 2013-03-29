@@ -13,8 +13,7 @@ module NPNTool.PTConstr (
   ) where
 
 import NPNTool.PetriNet
-import NPNTool.NPNet (SNet, Expr(..), Labelling)
-import qualified NPNTool.NPNet as NPN
+import NPNTool.NPNet (Labelling)
 import qualified Data.Map as M
 import Control.Monad
 import Control.Monad.State
@@ -35,14 +34,14 @@ data PTConstr l =
   
 type PTConstrM l = State (PTConstr l)
 
--- | New (empty) @PTConstr@                   
+-- | New (empty) 'PTConstr'                   
 new :: forall l. PTConstr l                   
 new = PTConstr { p = Set.empty, key = 1, keyT = 1, tin = M.empty, tout = M.empty, tlab = M.empty }
 
 toPTNet :: forall l. PTConstr l -> PTNet
 toPTNet c = Net { places  = p c
-                , trans   = Set.fromList (M.keys (tin c))
-                            `Set.union` Set.fromList (M.keys (tout c))
+                , trans   = M.keysSet (tin c)
+                            `Set.union` M.keysSet (tout c)
                 , pre     = pre'
                 , post    = post'
                 , initial = MSet.empty

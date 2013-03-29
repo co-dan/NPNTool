@@ -78,12 +78,12 @@ sn1 = SNet { net = sn1'
 sn1' = Net { places = Set.fromList [1,2,3,4]
            , trans  = Set.fromList [t1]
            , pre    = \(Trans x) -> case x of
-                "t1" -> MSExpr $ MSet.fromList [(Plus (Var "x") (Var "y"), 1)]
+                "t1" -> SArc $ Set.fromList [(Plus (Var "x") (Var "y"), 1)]
            , post   = \(Trans x) -> case x of
-                "t1" -> MSExpr $ MSet.fromList [(Plus (Var "x") (Var "y"), 2),
+                "t1" -> SArc $ Set.fromList [(Plus (Var "x") (Var "y"), 2),
                                        (Const 1, 3),
                                        (Var "y", 4)]
-           , initial = MSet.fromList [1]
+           , initial = NPMark (MSet.fromList [Left 1])
           } 
   where t1 = Trans "t1"
         
@@ -97,16 +97,16 @@ sn2 = SNet { net = sn2'
 sn2' = Net { places = Set.fromList [1,2,3,4,5,6]
            , trans  = Set.fromList [t1,t2,t3,t4]
            , pre    = \(Trans t) -> case t of
-                "t1" -> MSExpr $ MSet.fromList [(x, 1), (y, 2)]
-                "t2" -> MSExpr $ MSet.fromList [(x, 3), (y, 4)]
-                "t3" -> MSExpr $ MSet.fromList [(x, 5)]                
-                "t4" -> MSExpr $ MSet.fromList [(x, 6)]                
+                "t1" -> SArc $ Set.fromList [(x, 1), (y, 2)]
+                "t2" -> SArc $ Set.fromList [(x, 3), (y, 4)]
+                "t3" -> SArc $ Set.fromList [(x, 5)]                
+                "t4" -> SArc $ Set.fromList [(x, 6)]                
            , post   = \(Trans t) -> case t of
-                "t1" -> MSExpr $ MSet.fromList [(x, 3), (y, 4)]
-                "t2" -> MSExpr $ MSet.fromList [(x, 5), (y, 6)]
-                "t3" -> MSExpr $ MSet.fromList [(x, 5), (x, 6)]
-                "t4" -> MSExpr $ MSet.fromList [(x, 4)]                
-           , initial = MSet.fromList [1]
+                "t1" -> SArc $ Set.fromList [(x, 3), (y, 4)]
+                "t2" -> SArc $ Set.fromList [(x, 5), (y, 6)]
+                "t3" -> SArc $ Set.fromList [(x, 5), (x, 6)]
+                "t4" -> SArc $ Set.fromList [(x, 4)]                
+           , initial = NPMark (MSet.fromList [Left 1])
           } 
   where [t1,t2,t3,t4] = map Trans ["t1","t2","t3","t4"]
         x = Var "x" :: Expr String Int

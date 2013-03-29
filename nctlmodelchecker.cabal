@@ -23,6 +23,7 @@ Library
                        NPNTool.Graphviz,
                        NPNTool.NPNet,
                        NPNTool.PTConstr,
+                       NPNTool.NPNConstr,
                        NPNTool.XMLReader,
                        NPNTool.StateSpace,
                        NPNTool.NodeMap       
