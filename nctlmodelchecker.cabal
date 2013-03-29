@@ -23,8 +23,9 @@ Library
                        NPNTool.Graphviz,
                        NPNTool.NPNet,
                        NPNTool.PTConstr,
+                       NPNTool.XMLReader,
                        NPNTool.StateSpace,
-                       NPNTool.NodeMap        
+                       NPNTool.NodeMap       
   hs-source-dirs:      src/   
   other-modules:       NPNTool.NCTL,
                        NPNTool.ModelChecker
@@ -36,7 +37,7 @@ Library
                        containers >=0.5,
                        multiset ==0.2.2,
                        text ==0.11.*,
-                       -- hxt ==9.3.*,
+                       hxt ==9.3.*,
                        random ==1.0.*
                        
 
