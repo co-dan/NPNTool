@@ -28,8 +28,8 @@ aTrail n = do
   let pCur = head $ Set.toList $ rest Set.\\ proc
       ppost = postP pCur (net n)
   forM_ ppost $ \t -> do
-    let (MSExpr pre') = pre (net n) t
-        (MSExpr post') = post (net n) t
+    let (SArc pre') = pre (net n) t
+        (SArc post') = post (net n) t
         (expr,_) = fromJust $ F.find ((==pCur) . snd) pre'
         vs = vars expr
         ps = filterF (\(e',p') -> intersects vs (vars e')) post'

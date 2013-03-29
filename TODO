@@ -1,12 +1,13 @@
 * Generate Haddock documentation for all the modules
-* Write some unit tests
 * Write Arbitrary instance for PTNets and write QuickCheck tests
 * M-bisimilarity
-  - test for nets with cycles
-  - finish the check both ways
   - think of performing the check without statespace
   - better types?
 * PTConstr
-  - Generate transition names
   - Make `label' more abstract/general? (Attach labels to positions)
+  - Figure how to use a Monoid (and some typeclass for PTConstr)
+    to replace 'toPTNet' with more general 'toNet'
   - Markings
+* NPConstr
+  - toSArc function: change to make use of possible monoidal structure of SArc?
+  

@@ -1,12 +1,15 @@
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module NPNTool.NPNet (
-  Expr(..), vars, MSExpr(..),
-  Labelling, SNet(..), 
+  Expr(..), vars, SArc(..),
+  Labelling, SNet(..), ElemNet(..), NPMark(..)
   ) where
 
 import NPNTool.PetriNet
 import Data.Set (Set)
+import qualified Data.Set as Set
 import Data.MultiSet (MultiSet)
 import qualified Data.Foldable as F
+import Data.Monoid
 
 -- | Arc expressions for higher level nets
 data Expr v c = Var v
@@ -20,16 +23,22 @@ vars e = (vars' e) []
         vars' (Const _) = id
         vars' (Plus e1 e2) = vars' e1 . vars' e2
 
-newtype MSExpr v c p = MSExpr (MultiSet (Expr v c, p))
-
-instance F.Foldable (MSExpr v c) where 
-  foldMap f (MSExpr ms) = F.foldMap (f . snd) ms
+newtype SArc v c p = SArc { unSArc :: Set (Expr v c, p) }
+                   deriving Monoid
+                            
+instance F.Foldable (SArc v c) where 
+  foldMap f (SArc ms) = F.foldMap (f . snd) ms
 
 type Labelling l = Trans -> Maybe l 
 
+type ElemNet l = (PTNet, Labelling l)
+type ElemNetId = Int
+                    
+newtype NPMark l a = NPMark { unMark :: MultiSet (Either a ElemNetId) }
+
 data SNet lab var con = SNet
-     { net :: Net PTPlace Trans (MSExpr var con) MultiSet
-     , elementNets :: [(PTNet, Labelling lab)] -- element nets together with
+     { net :: Net PTPlace Trans (SArc var con) (NPMark lab)
+     , elementNets :: [ElemNet lab] -- element nets together with
                       -- transition labelling functions
      , labelling :: Labelling lab
      , labels :: Set lab
