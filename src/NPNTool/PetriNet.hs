@@ -1,13 +1,15 @@
 {-# LANGUAGE Rank2Types, FlexibleContexts #-}
+{-# LANGUAGE MultiParamTypeClasses, FunctionalDependencies #-}
+{-# LANGUAGE TypeSynonymInstances, FlexibleInstances #-}
 module NPNTool.PetriNet (
   -- * Datatypes
   Net(..), Trans(..), SS,
+  DynNet(..), 
   PTNet, PTMark, PTTrans, PTPlace,
   -- * General and abstract functions, opertations
   HLArc, LLArc, annotate,
-  -- * P/T nets specific functions
-  enabled, enabledS,
-  fire, fireSequence_, fireSequence,
+  -- * Additional functions
+  fireSequence_, fireSequence,
   reachabilityGraph, reachabilityGraph',
   postP, preP
   ) where
@@ -54,27 +56,41 @@ annotate :: (Functor a, Functor n) =>
 annotate n f g = n { pre = \t -> Compose $ fmap (flip f t) (pre n t) 
                    , post = \t -> Compose $ fmap (g t) (post n t) }
 
--- | Whether some transition is enabled
-enabled :: PTNet -> PTMark -> PTTrans -> Bool
-enabled (Net {pre=pre}) marking =
+-- | A general dynamic net interface
+class DynNet net p t m | net -> p, net -> t, net -> m where
+  -- | Whether a set of transitions is enabled.
+  -- Note that this is different then checking whether each
+  -- transition in the set is enabled
+  enabledS :: net -> m p -> Set t -> Bool
+  
+  -- | Whether some transition is enabled
+  enabled :: net -> m p -> t -> Bool
+  enabled n mark tr = enabledS n mark (Set.singleton tr)
+
+  -- | The marking after some transitions is fired
+  fire    :: net -> m p -> t -> m p
+
+instance DynNet PTNet PTPlace PTTrans MultiSet where
+  enabledS = enabledSPT
+  enabled = enabledPT
+  fire    = firePT
+
+enabledPT :: PTNet -> PTMark -> PTTrans -> Bool
+enabledPT (Net {pre=pre}) marking =
   (`MSet.isSubsetOf` marking)  . pre
 
--- | Whether a set of transitions is enabled
--- Note that there is different then checking whether each
--- transition in the set is enabled
-enabledS :: PTNet -> PTMark -> Set PTTrans -> Bool
-enabledS (Net {pre=pre}) marking =
+enabledSPT :: PTNet -> PTMark -> Set PTTrans -> Bool
+enabledSPT (Net {pre=pre}) marking =
   (`MSet.isSubsetOf` marking) . (F.foldMap pre)
 
--- | The marking after some transitions is fired
-fire :: PTNet -> PTMark -> PTTrans -> PTMark
-fire (Net {pre=pre, post=post}) mark t =
+firePT :: PTNet -> PTMark -> PTTrans -> PTMark
+firePT (Net {pre=pre, post=post}) mark t =
   (mark MSet.\\ pre t) <> post t
 
-fireSequence_ :: PTNet -> PTMark -> [PTTrans] -> PTMark
+fireSequence_ :: (DynNet net p t m) => net -> m p -> [t] -> m p
 fireSequence_ n = foldl (fire n)
 
-fireSequence :: PTNet -> PTMark -> [PTTrans] -> Maybe PTMark
+fireSequence :: (DynNet net p t m) => net -> m p -> [t] -> Maybe (m p)
 fireSequence n = F.foldlM (fire' n)
   where fire' n m t = if enabled n m t then Just (fire n m t) else Nothing
         
@@ -84,11 +100,13 @@ type SS = Gr PTMark PTTrans
 
 
 -- | The reachability graph of a Petri Net
-reachabilityGraph :: PTNet -> SS
+reachabilityGraph :: (DynNet (Net p t n m) p t m, Ord p, Ord (m p)) =>
+                      (Net p t n m) -> Gr (m p) t
 reachabilityGraph = snd. reachabilityGraph'          
 
 -- | The reachability graph of a Petri Net together with a 'NodeMap'                    
-reachabilityGraph' :: PTNet -> (NodeMap PTMark, SS)
+reachabilityGraph' :: (DynNet (Net p t n m) p t m, Ord p, Ord (m p)) =>
+                      (Net p t n m) -> (NodeMap (m p), Gr (m p) t)
 reachabilityGraph' net = snd $ run G.empty $ 
                         insMapNodeM (initial net) >> go (Set.singleton (initial net))
   where go work | Set.null work = return ()
@@ -99,8 +117,8 @@ reachabilityGraph' net = snd $ run G.empty $
           work'' <- F.foldrM (act net m) work' (trans net)
           go work'' 
   
-act :: G.DynGraph g => 
-       PTNet -> PTMark -> PTTrans -> Set PTMark -> NodeMapM PTMark PTTrans g (Set PTMark)
+act :: (G.DynGraph g, DynNet net p t m, Ord p, Ord (m p)) => 
+       net -> m p -> t -> Set (m p) -> NodeMapM (m p) t g (Set (m p))
 act net m t w =
   if enabled net m t
   then do 

@@ -10,7 +10,7 @@ module NPNTool.NPNConstr (
   mkPlace, mkTrans, label,
   inT, outT,
   -- * Generalized arcs (with expressions)
-  ArcExpr (..), arcExpr,
+  ArcExpr (..)
   ) where
 
 import qualified NPNTool.PTConstr as PTC
