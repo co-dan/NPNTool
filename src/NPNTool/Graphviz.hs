@@ -1,7 +1,8 @@
 -- | Simple module for producing Graphviz diagrams of Petri Nets
-module NPNTool.Graphviz (drawPT) where
+module NPNTool.Graphviz (drawPT, drawWithLab) where
 
 import NPNTool.PetriNet
+import NPNTool.NPNet
 import Data.Set (Set)
 import qualified Data.Set as S
 import Data.Foldable (Foldable)
@@ -35,3 +36,37 @@ drawPT net =
     , "    " ++ concatMap (showPre net) (S.toList (trans net))
     , "    " ++ concatMap (showPost net) (S.toList (trans net))
     , "}"]
+
+
+showLab :: (Show a1, Show a) => (a, a1) -> String
+showLab (t, l) = filter (not . (`elem` "\"'")) $ show t ++ "_" ++ show l
+
+showSetLab :: (Show a, Show b) => Set (a,b) -> String
+showSetLab = concatMap ((++ "\"; ") . ("\"" ++ ) . showLab) . S.toList
+        
+showPreLab :: (Show p, Foldable n, Show l) => Net p Trans n m -> (Trans, Maybe l) -> String
+showPreLab (Net {pre=pre}) tr@(t,l)  =
+  F.concatMap ((++ " -> \"" ++ showLab tr  ++ "\"; ") . show) (pre t)
+ 
+showPostLab :: (Show p, Foldable n, Show l) => Net p Trans n m -> (Trans, Maybe l) -> String
+showPostLab (Net {post=post}) tr@(t,l) =
+  F.concatMap (\x -> "\"" ++ showLab tr ++ "\" -> " ++ show x ++ "; ") (post t)
+
+-- | Draws a net using the labelling for transitions
+drawWithLab :: (Show p, Foldable n, Show l, Ord l) => Net p Trans n m -> Labelling l -> String
+drawWithLab net lab =
+    unlines 
+    [ "digraph PT {"
+    , "    subgraph place {"
+    , "        graph [shape=circle,color=gray];"
+    , "        node [shape=circle,fixedsize=true,width=1];"
+    , "        " ++ showSet (places net)
+    , "    }"
+    , "    subgraph transitions {"
+    , "        node [shape=rect,height=0.2,width=1];"
+    , "        " ++ showSetLab tr
+    , "    }"
+    , "    " ++ concatMap (showPreLab net) (S.toList tr)
+    , "    " ++ concatMap (showPostLab net) (S.toList tr)
+    , "}"]
+  where tr = S.map (\x -> (x, lab x)) (trans net)

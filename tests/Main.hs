@@ -299,7 +299,8 @@ pn10 :: PTNet
 
 pn10 = pn10' { initial = MSet.fromList [1] }
 
-test4 = H.assertBool "pn9 should NOT be m-bisimilar to pn10" (not $ isJust (isMBisim (pn4,l4) (pn5,l5)))
+test4 = H.assertBool "pn9 should NOT be m-bisimilar to pn10"
+        (isNothing (isMBisim (pn9,l9) (pn10,l10)))
 
 isInterchangeable :: PTNet -> PTMark -> Set Trans -> Bool
 isInterchangeable n m ts =
