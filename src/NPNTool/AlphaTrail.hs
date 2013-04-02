@@ -7,6 +7,8 @@ import NPNTool.NPNet
 import NPNTool.PTConstr
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Data.Map (Map)
+import qualified Data.Map as M
 import Data.Maybe (fromJust)
 import Data.List (intersect)
 import Control.Monad
@@ -16,7 +18,7 @@ import qualified Data.Foldable as F
 -- | Generate an alpha-trail net for a specific place in a SNet
 alphaTrail :: Eq v => SNet l v c -> PTPlace -> PTNet
 alphaTrail n p = snd $ run (evalStateT (aTrail n) (Set.singleton p,Set.empty)) init
-  where init = new { p = Set.singleton p, key = p+1 }
+  where init = new { p = M.singleton p 0, key = p+1 }
           
 
 type ATrailBuilder l a = StateT (Set PTPlace,Set PTPlace) (PTConstrM l) a
