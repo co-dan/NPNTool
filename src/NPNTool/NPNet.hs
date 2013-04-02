@@ -36,13 +36,12 @@ instance F.Foldable (SArc v c) where
 
 type Labelling l = Trans -> Maybe l 
 
-type ElemNet l = (PTNet, Labelling l)
-type ElemNetId = Int
+type ElemNet l = (PTNet, Labelling l, PTMark)
                     
-newtype NPMark l a = NPMark { unMark :: MultiSet (Either a ElemNetId) }
+newtype NPMark l c a = NPMark { unMark :: a -> [Either c (ElemNet l)] }
 
 data SNet lab var con = SNet
-     { net :: Net PTPlace Trans (SArc var con) (NPMark lab)
+     { net :: Net PTPlace Trans (SArc var con) (NPMark lab con)
      , elementNets :: [ElemNet lab] -- element nets together with
                       -- transition labelling functions
      , labelling :: Labelling lab

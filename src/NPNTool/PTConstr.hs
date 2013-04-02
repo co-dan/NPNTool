@@ -6,7 +6,8 @@ module NPNTool.PTConstr (
   new,
   -- * Monadic interface
   run, runL,
-  mkPlace, insPlace, mkTrans, label,
+  mkPlace, insPlace, mkTrans,
+  label, mark, marking,
   inT, outT, inTn, outTn,
   -- * Generalized arcs
   Arc (..), arcn, conn
@@ -26,7 +27,8 @@ import Data.Maybe (fromMaybe)
 -- | Datatype for dynamically constructing Petri Nets  
 data PTConstr l =
   PTConstr
-  { p     :: Set PTPlace, key :: Int, keyT :: Int
+  { p     :: M.Map PTPlace Int
+  , key   :: Int, keyT :: Int
   , tin   :: M.Map Trans (MultiSet PTPlace)
   , tout  :: M.Map Trans (MultiSet PTPlace)
   , tlab  :: M.Map Trans l
@@ -36,15 +38,15 @@ type PTConstrM l = State (PTConstr l)
 
 -- | New (empty) 'PTConstr'                   
 new :: forall l. PTConstr l                   
-new = PTConstr { p = Set.empty, key = 1, keyT = 1, tin = M.empty, tout = M.empty, tlab = M.empty }
+new = PTConstr { p = M.empty, key = 1, keyT = 1, tin = M.empty, tout = M.empty, tlab = M.empty }
 
 toPTNet :: forall l. PTConstr l -> PTNet
-toPTNet c = Net { places  = p c
+toPTNet c = Net { places  = M.keysSet (p c)
                 , trans   = M.keysSet (tin c)
                             `Set.union` M.keysSet (tout c)
                 , pre     = pre'
                 , post    = post'
-                , initial = MSet.empty
+                , initial = MSet.fromMap (p c)
                 } 
   where pre'  t = fromMaybe MSet.empty (M.lookup t (tin c))
         post' t = fromMaybe MSet.empty (M.lookup t (tout c))
@@ -58,8 +60,19 @@ mkPlace = do
   c <- get
   let key' = key c
       p'   = p c
-  put $ c {p = Set.insert key' p', key = key' + 1}
+  put $ c { p = M.insert key' 0 p', key = key' + 1 }
   return key'
+
+-- | Marks a place with a token
+mark :: PTPlace -> PTConstrM l ()
+mark place = do
+  c <- get
+  let p' = p c
+  put $ c { p = M.insertWith (+) place 1 p' }
+
+-- | Marks a set of places
+marking :: [PTPlace] -> PTConstrM l ()
+marking = mapM_ mark
 
 -- | Inserts an existing place in the net
 -- Does nothing if the place is already present
@@ -67,7 +80,7 @@ insPlace :: PTPlace -> PTConstrM l ()
 insPlace newP = do
   c <- get
   let p' = p c
-  put $ c {p = Set.insert newP p'}
+  put $ c { p = M.insert newP 0 p' }
 
 -- | Creates a new transition not yet present in the net
 mkTrans :: PTConstrM l Trans
@@ -82,7 +95,7 @@ label :: Trans -> l -> PTConstrM l ()
 label t lab = do
   c <- get
   let tlab' = tlab c
-  put $ c {tlab = M.insert t lab tlab'}
+  put $ c { tlab = M.insert t lab tlab' }
   
 -- | Generalized arc class
 class Arc k where

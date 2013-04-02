@@ -25,14 +25,14 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.MultiSet (MultiSet)
 import qualified Data.MultiSet as MSet
-import Data.Maybe (fromMaybe)
+import Data.Maybe (fromMaybe,fromJust)
 import Data.Tuple (swap)
 import qualified Data.Foldable as F
 
 -- | Datatype for dynamically constructing Nested Petri nets
 data NPNConstr l v c =
   NPNConstr
-  { p     :: Set PTPlace
+  { p     :: M.Map PTPlace [Either c (ElemNet l)]
   , key   :: Int, keyT :: Int
   , tin   :: M.Map Trans (SArc v c PTPlace)
   , tout  :: M.Map Trans (SArc v c PTPlace)
@@ -43,12 +43,12 @@ data NPNConstr l v c =
 toNPN :: (Ord l, Ord v, Ord c) => NPNConstr l v c -> SNet l v c
 toNPN c =
   SNet
-  { net = Net { places = p c
+  { net = Net { places = M.keysSet (p c)
               , trans   = M.keysSet (tin c)
                           `Set.union` M.keysSet (tout c)
               , pre = pre'
               , post = post'
-              , initial = NPMark (MSet.empty)
+              , initial = NPMark ((p c) M.!)
               }
   , elementNets = Set.toList (nets c)
   , labelling = toLabelling c
@@ -68,12 +68,12 @@ run c s =
        
 -- | New (empty) 'NPNConstr'                                       
 new :: NPNConstr l v c
-new = NPNConstr { p    = Set.empty
-               , key  = 1, keyT = 1
-               , tin  = M.empty, tout = M.empty
-               , nets = Set.empty
-               , tlab = M.empty
-               }
+new = NPNConstr { p    = M.empty
+                , key  = 1, keyT = 1
+                , tin  = M.empty, tout = M.empty
+                , nets = Set.empty
+                , tlab = M.empty
+                }
 
 intToExpr :: Int -> Expr v Int
 intToExpr x = if x == 1 then Const 1 else Plus (Const 1) (intToExpr (x-1))
@@ -81,15 +81,23 @@ intToExpr x = if x == 1 then Const 1 else Plus (Const 1) (intToExpr (x-1))
 toSArc :: Ord v => MultiSet PTPlace -> SArc v Int PTPlace
 toSArc =  F.foldMap (SArc . Set.singleton . swap . (second intToExpr)) . MSet.toOccurList
 
+isLeft :: Either t t1 -> Bool
+isLeft (Left _) = True
+isLeft (Right _) = False
+
+fromLeft :: Either t t1 -> t
+fromLeft (Left x) = x
+fromLeft (Right _) = error "fromLeft"
+
 -- | Lift a 'PTC.PTConstrM' constructions to 'NPNConstrM' monad  
 liftPTC :: Ord v => PTC.PTConstrM l a -> NPNConstrM l v a
 liftPTC ptc = do
   st <- get
-  let c = PTC.new { PTC.p = p st
+  let c = PTC.new { PTC.p = M.map (length . filter isLeft) $ p st
                   , PTC.key = key st, PTC.keyT = keyT st
                   , PTC.tlab = tlab st }
       (res,c') = runState ptc c
-      st' = st { p    = PTC.p c'
+      st' = st { p    = M.map ((:[]) . Left) $ PTC.p c'
                , key  = PTC.key c', keyT = PTC.keyT c'
                , tlab = PTC.tlab c'
                , tin  = M.unionWith mappend (tin st) (M.map toSArc (PTC.tin c'))

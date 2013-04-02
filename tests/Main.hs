@@ -83,7 +83,7 @@ sn1' = Net { places = Set.fromList [1,2,3,4]
                 "t1" -> SArc $ Set.fromList [(Plus (Var "x") (Var "y"), 2),
                                        (Const 1, 3),
                                        (Var "y", 4)]
-           , initial = NPMark (MSet.fromList [Left 1])
+           , initial = NPMark (\x -> case x of 1 -> [Left 1])
           } 
   where t1 = Trans "t1"
         
@@ -106,7 +106,7 @@ sn2' = Net { places = Set.fromList [1,2,3,4,5,6]
                 "t2" -> SArc $ Set.fromList [(x, 5), (y, 6)]
                 "t3" -> SArc $ Set.fromList [(x, 5), (x, 6)]
                 "t4" -> SArc $ Set.fromList [(x, 4)]                
-           , initial = NPMark (MSet.fromList [Left 1])
+           , initial = NPMark (\x -> case x of 1 -> [Left 1])
           } 
   where [t1,t2,t3,t4] = map Trans ["t1","t2","t3","t4"]
         x = Var "x" :: Expr String Int
@@ -357,3 +357,34 @@ livenessTests = H.TestList [ H.TestLabel "Liveness test 1" (H.TestCase testLive1
 main = do
   c <- H.runTestTT $ H.TestList [mBisimTests, livenessTests]
   when (H.errors c > 0 || H.failures c > 0) exitFailure
+
+
+lSeed, lPeer, lPipe :: Labelling L
+enSeed, enPeer, enPipe :: PTNet
+
+(_,enSeed,lSeed) = flip runL new $ do
+  [p1,p2,p3] <- replicateM 3 mkPlace
+  [t1,t2,t3] <- replicateM 3 mkTrans
+  mapM (flip label A) [t1,t2,t3]
+  arc p1 t1
+  arc t1 p2
+  arc p2 t2
+  arc t2 p3
+  arc p3 t3
+  arc t3 p1
+  mark p1
+  
+(_,enPeer,lPeer) = flip runL new $ do
+  [p4,p5] <- replicateM 2 mkPlace
+  [t4,t5] <- replicateM 2 mkTrans
+  label t4 A
+  label t5 A
+  arc p4 t4
+  arc p5 t5
+  arc t4 p5
+  arc t5 p4
+  mark p5
+
+(_,enPipe,lPipe) = flip runL new $ do
+  return ()
+  
