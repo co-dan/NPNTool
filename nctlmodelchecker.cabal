@@ -39,6 +39,7 @@ Library
                        multiset ==0.2.2,
                        text ==0.11.*,
                        hxt ==9.3.*,
+                       HUnit,
                        random ==1.0.*
                        
 

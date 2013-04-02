@@ -244,6 +244,63 @@ pn8 = pn8' { initial = MSet.fromList [1] }
 
 test3 = H.assertBool "pn7 should be m-bisimilar to pn8" (isJust (isMBisim (pn7,l7) (pn8,l8)))
 
+
+pn9 :: PTNet
+(_,pn9',l9) = flip runL new $ do
+  [p1,p2,p3,p4] <- replicateM 4 mkPlace
+  [t1,t2,t3] <- replicateM 3 mkTrans
+  arc p1 t1
+  arc t1 p2
+  
+  arc p2 t2
+  arc p2 t3
+  arc t2 p3
+  arc t3 p4
+  label t2 "a"
+  label t3 "b"
+  return ()
+pn9 = pn9' { initial = MSet.fromList [1] }
+
+pn10 :: PTNet
+(_,pn10',l10) = flip runL new $ do
+  [s1,s2,s3,s4] <- replicateM 4 mkPlace
+  [tr1,tr2,tr3,tr4,tr5] <- replicateM 5 mkTrans
+
+  [p1,p2,p3,p4,p5] <- replicateM 5 mkPlace
+  [t1,t2,t3,t4] <- replicateM 4 mkTrans
+
+  arc s1 tr1
+  arc tr1 s2
+  arc s2 tr2
+  arc tr2 s1
+  
+  arc s2 tr3
+  arc tr3 p1
+  
+  arc s2 tr4
+  arc tr4 s3
+  arc s3 tr5
+  arc tr5 s4
+  label tr5 "a"
+  
+  arc p1 t1
+  arc t1 p2
+  
+  arc p2 t2
+  arc p2 t3
+  arc t2 p3
+  label t2 "b"
+
+  arc t3 p4
+  arc p4 t4
+  arc t4 p5
+  label t4 "a"
+  return ()
+
+pn10 = pn10' { initial = MSet.fromList [1] }
+
+test4 = H.assertBool "pn9 should NOT be m-bisimilar to pn10" (not $ isJust (isMBisim (pn4,l4) (pn5,l5)))
+
 isInterchangeable :: PTNet -> PTMark -> Set Trans -> Bool
 isInterchangeable n m ts =
   getAll $ F.foldMap (All . enabledS n m . (`Set.delete` ts)) ts
@@ -251,7 +308,8 @@ isInterchangeable n m ts =
 
 mBisimTests = H.TestList [ H.TestLabel "test1" (H.TestCase test1)
                          , H.TestLabel "test2" (H.TestCase test2)
-                         , H.TestLabel "test3" (H.TestCase test3) ]
+                         , H.TestLabel "test3" (H.TestCase test3) 
+                         , H.TestLabel "test4" (H.TestCase test4)]
 
 
 ((a,b,idle),twoProcNet') = run' $ do
