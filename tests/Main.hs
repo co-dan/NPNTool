@@ -70,8 +70,8 @@ pn3 = snd . run' $ do
   return ()
   
 
-sn1 :: SNet String String PTPlace
-sn1 = SNet { net = sn1'
+sn1 :: NPNet String String PTPlace
+sn1 = NPNet { net = sn1'
            , elementNets = []
            , labelling = undefined
            , labels = Set.empty
@@ -89,8 +89,8 @@ sn1' = Net { places = Set.fromList [1,2,3,4]
           } 
   where t1 = Trans "t1"
         
-sn2 :: SNet String String PTPlace
-sn2 = SNet { net = sn2'
+sn2 :: NPNet String String PTPlace
+sn2 = NPNet { net = sn2'
            , elementNets = []
            , labelling = undefined
            , labels = Set.empty
@@ -361,26 +361,32 @@ main = do
   when (H.errors c > 0 || H.failures c > 0) exitFailure
 
 
-lSeed, lPeer, lPipe :: Labelling L
+data P2PL = StartTransfer | EndTransfer | Reinitialize
+          deriving (Show, Eq, Ord)
+
+lSeed, lPeer, lPipe :: Labelling P2PL
 enSeed, enPeer, enPipe :: PTNet
 
 (_,enSeed,lSeed) = flip runL new $ do
   [p1,p2,p3] <- replicateM 3 mkPlace
   [t1,t2,t3] <- replicateM 3 mkTrans
-  mapM (flip label A) [t1,t2,t3]
   arc p1 t1
   arc t1 p2
   arc p2 t2
   arc t2 p3
   arc p3 t3
   arc t3 p1
+  label t1 StartTransfer
+  label t2 EndTransfer
+  label t3 Reinitialize
   mark p1
+  
   
 (_,enPeer,lPeer) = flip runL new $ do
   [p4,p5] <- replicateM 2 mkPlace
   [t4,t5] <- replicateM 2 mkTrans
-  label t4 A
-  label t5 A
+  label t4 StartTransfer
+  label t5 EndTransfer
   arc p4 t4
   arc p5 t5
   arc t4 p5
@@ -424,22 +430,25 @@ enSeed, enPeer, enPipe :: PTNet
   arc p15 t11
   arc t10 p15
 
-  label t12 A
-  label t11 A
-  label t10 A
+  label t12 EndTransfer
+  label t11 StartTransfer
+  label t10 Reinitialize
 
   mark p9
   mark p11
   mark p15
   return ()
   
-snP2P :: SNet L String Int
+snP2P :: NPNet P2PL String Int
 snP2P = snd . flip NPC.run NPC.new $ do
   [initSeed,initPeer,initPipe,
    finalSeed,finalPeer,finalPipe,
    p22,p23] <- replicateM 8 NPC.mkPlace
   [t14,t15,t16,t17] <- replicateM 4 NPC.mkTrans
-  mapM (flip NPC.label A) [t14,t15,t16,t17]
+  NPC.label t14 StartTransfer
+  NPC.label t16 EndTransfer
+  NPC.label t15 Reinitialize
+  NPC.label t17 Reinitialize
   let x = Var "x"
       y = Var "y"
       z = Var "z"
@@ -470,5 +479,5 @@ snP2P = snd . flip NPC.run NPC.new $ do
 
   NPC.marks initSeed (map Right [seed1,seed2,seed3])
   NPC.mark initPipe (Right pipe1)
-  NPC.marks initPeer (map Right [peer1,peer2,peer3])
+  NPC.marks initPeer (map Right [peer1,peer2,peer3,peer4])
 

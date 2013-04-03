@@ -41,9 +41,9 @@ data NPNConstr l v c =
   , tlab  :: M.Map Trans l
   }
 
-toNPN :: (Ord l, Ord v, Ord c) => NPNConstr l v c -> SNet l v c
+toNPN :: (Ord l, Ord v, Ord c) => NPNConstr l v c -> NPNet l v c
 toNPN c =
-  SNet
+  NPNet
   { net = Net { places = M.keysSet (p c)
               , trans   = M.keysSet (tin c)
                           `Set.union` M.keysSet (tout c)
@@ -62,7 +62,7 @@ toNPN c =
 type NPNConstrM l v = State (NPNConstr l v Int)
 
 -- | Runs a @NPNConstrM@ monad and returns a NP-net together with a result              
-run :: (Ord v, Ord l) => NPNConstrM l v a -> NPNConstr l v Int -> (a, SNet l v Int)
+run :: (Ord v, Ord l) => NPNConstrM l v a -> NPNConstr l v Int -> (a, NPNet l v Int)
 run c s =
   let (a, s') = runState c s
   in (a, toNPN s')     

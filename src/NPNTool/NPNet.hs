@@ -1,14 +1,13 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, FlexibleInstances #-}
 module NPNTool.NPNet (
   Expr(..), vars, SArc(..),
-  Labelling, SNet(..), ElemNet(..), NPMark(..),
+  Labelling, NPNet(..), SNet, ElemNet, NPMark(..),
   exprMult, showMarking
   ) where
 
 import NPNTool.PetriNet
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Data.MultiSet (MultiSet)
 import qualified Data.Foldable as F
 import Data.Monoid
 
@@ -34,22 +33,22 @@ newtype SArc v c p = SArc { unSArc :: Set (Expr v c, p) }
 instance F.Foldable (SArc v c) where 
   foldMap f (SArc ms) = F.foldMap (f . snd) ms
 
+type SNet lab var con = Net PTPlace Trans (SArc var con) (NPMark lab con)
 type Labelling l = Trans -> Maybe l 
-
 type ElemNet l = (PTNet, Labelling l, PTMark)
                     
 newtype NPMark l c a = NPMark { unMark :: a -> [Either c (ElemNet l)] }
 
-data SNet lab var con = SNet
-     { net :: Net PTPlace Trans (SArc var con) (NPMark lab con)
+data NPNet lab var con = NPNet
+     { net :: SNet lab var con
      , elementNets :: [ElemNet lab] -- element nets together with
                       -- transition labelling functions
      , labelling :: Labelling lab
      , labels :: Set lab
      }  
 
-showMarking :: (Show con) => SNet lab var con -> String
-showMarking n@(SNet {net = net}) =
+showMarking :: (Show con) => NPNet lab var con -> String
+showMarking n@(NPNet {net = net}) =
   show $ map (map showEN . unMark (initial net)) (Set.toList (places net))
   where
     showEN (Left c) = Left c

@@ -15,15 +15,15 @@ import Control.Monad
 import Control.Monad.State
 import qualified Data.Foldable as F
 
--- | Generate an alpha-trail net for a specific place in a SNet
-alphaTrail :: Eq v => SNet l v c -> PTPlace -> PTNet
+-- | Generate an alpha-trail net for a specific place in a NPNet
+alphaTrail :: Eq v => NPNet l v c -> PTPlace -> PTNet
 alphaTrail n p = snd $ run (evalStateT (aTrail n) (Set.singleton p,Set.empty)) init
   where init = new { p = M.singleton p 0, key = p+1 }
           
 
 type ATrailBuilder l a = StateT (Set PTPlace,Set PTPlace) (PTConstrM l) a
 
-aTrail :: Eq v => SNet l v c -> ATrailBuilder l ()
+aTrail :: Eq v => NPNet l v c -> ATrailBuilder l ()
 aTrail n = do
   (rest, proc) <- get
   unless (Set.null (rest Set.\\ proc)) $ do
