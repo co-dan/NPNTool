@@ -353,9 +353,14 @@ testLive1 = H.assertBool "twoProcNet1 should be live" (isLive ss1 twoProcNet1)
 testLive2 = H.assertBool "twoProcNet2 should NOT be live" (not (isLive ss2 twoProcNet2))
   where ss2 = reachabilityGraph twoProcNet2
 
+p2pLive = H.assertBool "snP2P should be live as a sep component"
+          (isLive (reachabilityGraph (net snP2P)) (net snP2P))
         
-livenessTests = H.TestList [ H.TestLabel "Liveness test 1" (H.TestCase testLive1)
-                           , H.TestLabel "Liveness test 2" (H.TestCase testLive2) ]
+livenessTests = H.TestList
+                [ H.TestLabel "Liveness test 1" (H.TestCase testLive1)
+                , H.TestLabel "Liveness test 2" (H.TestCase testLive2)
+                , H.TestLabel "Liveness test for P2P example 1"
+                  (H.TestCase p2pLive)]
 
 dynTests = H.TestList [ H.TestLabel "DynNet test 1" (H.TestCase dynTest1) ]
 
