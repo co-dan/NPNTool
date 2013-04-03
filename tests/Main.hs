@@ -6,6 +6,8 @@ import System.Exit (exitFailure)
 
 import NPNTool.PetriNet
 import NPNTool.PTConstr
+import NPNTool.NPNConstr (arcExpr, liftPTC, liftElemNet, addElemNet)
+import qualified NPNTool.NPNConstr as NPC
 import NPNTool.Graphviz
 import NPNTool.Bisimilarity
 import NPNTool.Liveness
@@ -386,5 +388,87 @@ enSeed, enPeer, enPipe :: PTNet
   mark p5
 
 (_,enPipe,lPipe) = flip runL new $ do
+  [p6,p7,p8,p9,p10,p11,p12,p13,p14,p15] <- replicateM 10 mkPlace
+  [t6,t7,t8,t9,t10,t11,t12] <- replicateM 7 mkTrans
+  arc p6 t7
+  arc t6 p6
+
+  arc p7 t6
+  arc p7 t12
+  arc t7 p7
+  arc t11 p7
+
+  arc p8 t8
+  arc t7 p8
+
+  arc p9 t7
+  arc t8 p9
+
+  arc p10 t9
+  arc t8 p10
+
+  arc p11 t8
+  arc t9 p11
+
+  arc p12 t9
+  arc t6 p12
+
+  arc p13 t12
+  arc p13 t6
+  arc t11 p13
+  arc t9 p13
+
+  arc p14 t10
+  arc t12 p14
+
+  arc p15 t11
+  arc t10 p15
+
+  label t12 A
+  label t11 A
+  label t10 A
+
+  mark p9
+  mark p11
+  mark p15
   return ()
   
+snP2P :: SNet L String Int
+snP2P = snd . flip NPC.run NPC.new $ do
+  [initSeed,initPeer,initPipe,
+   finalSeed,finalPeer,finalPipe,
+   p22,p23] <- replicateM 8 NPC.mkPlace
+  [t14,t15,t16,t17] <- replicateM 4 NPC.mkTrans
+  mapM (flip NPC.label A) [t14,t15,t16,t17]
+  let x = Var "x"
+      y = Var "y"
+      z = Var "z"
+  arcExpr initSeed x t14
+  arcExpr initPeer y t14
+  arcExpr initPipe z t14
+  arcExpr t14 x finalSeed
+  arcExpr t14 y finalPeer
+  arcExpr t14 z finalPipe
+
+  arcExpr finalSeed x t16
+  arcExpr finalPeer y t16
+  arcExpr finalPipe z t16
+
+  arcExpr t16 x p22
+  arcExpr t16 z p23
+  arcExpr t16 y initPeer
+
+  arcExpr p22 x t15
+  arcExpr t15 x initSeed
+
+  arcExpr p23 z t17
+  arcExpr t17 z initPipe
+
+  [seed1,seed2,seed3] <- replicateM 3 (addElemNet (enSeed,lSeed,initial enSeed))
+  pipe1 <- addElemNet (enPipe,lPipe,initial enPipe)
+  [peer1,peer2,peer3,peer4] <- replicateM 4 (addElemNet (enPeer,lPeer,initial enPeer))
+
+  NPC.marks initSeed (map Right [seed1,seed2,seed3])
+  NPC.mark initPipe (Right pipe1)
+  NPC.marks initPeer (map Right [peer1,peer2,peer3])
+

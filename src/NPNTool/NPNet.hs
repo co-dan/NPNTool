@@ -1,8 +1,8 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, FlexibleInstances #-}
 module NPNTool.NPNet (
   Expr(..), vars, SArc(..),
   Labelling, SNet(..), ElemNet(..), NPMark(..),
-  exprMult
+  exprMult, showMarking
   ) where
 
 import NPNTool.PetriNet
@@ -47,4 +47,11 @@ data SNet lab var con = SNet
      , labelling :: Labelling lab
      , labels :: Set lab
      }  
+
+showMarking :: (Show con) => SNet lab var con -> String
+showMarking n@(SNet {net = net}) =
+  show $ map (map showEN . unMark (initial net)) (Set.toList (places net))
+  where
+    showEN (Left c) = Left c
+    showEN (Right (_,_,m)) = Right m
 

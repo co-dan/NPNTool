@@ -53,7 +53,7 @@ findPath (ss,ll) pt nm l from =
   where start = if isNothing l -- if label is silet, we can use the empty path
                 then []
                 else growPath (pt,ll) [from]
-                     -- ^ for a non-silent label we must remove all the paths that
+                     -- for a non-silent label we must remove all the paths that
                      -- do not actually contain a label
 
 findPath' :: Eq l => (SS, Labelling l) -> NodeMap PTMark -> Maybe l -> PTMark -> [Tree PTMark]
