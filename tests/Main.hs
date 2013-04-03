@@ -11,6 +11,7 @@ import qualified NPNTool.NPNConstr as NPC
 import NPNTool.Graphviz
 import NPNTool.Bisimilarity
 import NPNTool.Liveness
+import NPNTool.AlphaTrail
 import NPNTool.NPNet
 import NPNTool.CTL
 import qualified Data.IntMap as IM
@@ -314,7 +315,13 @@ isInterchangeable n m ts =
 mBisimTests = H.TestList [ H.TestLabel "test1" (H.TestCase test1)
                          , H.TestLabel "test2" (H.TestCase test2)
                          , H.TestLabel "test3" (H.TestCase test3) 
-                         , H.TestLabel "test4" (H.TestCase test4)]
+                         , H.TestLabel "test4" (H.TestCase test4)
+                         , H.TestLabel "Liveness test for p2p 1"
+                           (H.TestCase p2pBsimTest1)
+                         , H.TestLabel "Liveness test for p2p 2"
+                           (H.TestCase p2pBsimTest2)
+                         , H.TestLabel "Liveness test for p2p 2"
+                           (H.TestCase p2pBsimTest3)]
 
 
 ((a,b,idle),twoProcNet') = run' $ do
@@ -399,7 +406,7 @@ enSeed, enPeer, enPipe :: PTNet
   arc p5 t5
   arc t4 p5
   arc t5 p4
-  mark p5
+  mark p4
 
 (_,enPipe,lPipe) = flip runL new $ do
   [p6,p7,p8,p9,p10,p11,p12,p13,p14,p15] <- replicateM 10 mkPlace
@@ -493,3 +500,14 @@ dynTest1 :: H.Assertion
 dynTest1 = H.assertBool "t1 should be enabled in snP2P"
            (enabled (net snP2P) (initial (net snP2P)) (Trans "t1"))
            
+p2pBsimTest1 :: H.Assertion
+p2pBsimTest1 = H.assertBool "a-trail for place 1 should be m-bisimilar to EN_seed"
+               (isJust (isMBisim (alphaTrail (snP2P) 1) (enSeed,lSeed)))
+
+p2pBsimTest2 :: H.Assertion
+p2pBsimTest2 = H.assertBool "a-trail for place 2 should be m-bisimilar to EN_peer"
+               (isJust (isMBisim (alphaTrail (snP2P) 2) (enPeer,lPeer)))
+
+p2pBsimTest3 :: H.Assertion
+p2pBsimTest3 = H.assertBool "a-trail for place 3 should NOT be m-bisimilar to EN_pipe"
+               (isNothing (isMBisim (alphaTrail (snP2P) 3) (enPipe,lPipe)))               

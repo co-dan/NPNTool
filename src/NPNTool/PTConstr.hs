@@ -80,7 +80,7 @@ insPlace :: PTPlace -> PTConstrM l ()
 insPlace newP = do
   c <- get
   let p' = p c
-  put $ c { p = M.insert newP 0 p' }
+  put $ c { p = M.insertWith (flip const) newP 0 p' }
 
 -- | Creates a new transition not yet present in the net
 mkTrans :: PTConstrM l Trans
