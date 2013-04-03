@@ -56,7 +56,7 @@ getNetConstr doc = runX $ configSysVars [withTrace 1]
                    >>> multi (isElem >>> (getPlace <+> getTrans
                                           <+> getArcPT <+> getArcTP))
 
-runConstr :: FilePath -> IO (SNet Variable Label Int)
+runConstr :: FilePath -> IO (NPNet Variable Label Int)
 runConstr doc = do
   constr <- getNetConstr doc
   let (_,sn) = run (sequence constr) new
