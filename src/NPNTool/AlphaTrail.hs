@@ -16,9 +16,12 @@ import Control.Monad.State
 import qualified Data.Foldable as F
 
 -- | Generate an alpha-trail net for a specific place in a NPNet
-alphaTrail :: Eq v => NPNet l v c -> PTPlace -> PTNet
-alphaTrail n p = snd $ run (evalStateT (aTrail n) (Set.singleton p,Set.empty)) init
-  where init = new { p = M.singleton p 0, key = p+1 }
+alphaTrail :: Eq v => NPNet l v c -> PTPlace -> (PTNet, Labelling l)
+alphaTrail n p = sndthrd $
+                 runL aTrailCode init
+  where init = new { p = M.singleton p 1, key = p+1 }
+        aTrailCode = evalStateT (aTrail n) (Set.singleton p,Set.empty)
+        sndthrd (_,x,y) = (x,y)
           
 
 type ATrailBuilder l a = StateT (Set PTPlace,Set PTPlace) (PTConstrM l) a
@@ -36,7 +39,7 @@ aTrail n = do
         vs = vars expr
         ps = filterF (\(e',p') -> intersects vs (vars e')) post'
     forM_ ps $ \(e,p) -> do
-      t' <- lift $ addP pCur p t
+      t' <- lift $ addP pCur p
       case labelling n t of
         Nothing -> return ()
         Just l  -> lift $ label t' l
@@ -54,10 +57,10 @@ addProc p = do
   (rest, proc) <- get
   put (rest, p `Set.insert` proc)
    
-addP :: PTPlace -> PTPlace -> Trans -> PTConstrM l Trans
-addP p p' t = do
+addP :: PTPlace -> PTPlace -> PTConstrM l Trans
+addP p p' = do
   insPlace p'
-  let t' = Trans $ show t ++ show p'
+  t' <- mkTrans
   arc p t'
   arc t' p'
   return t'
