@@ -301,6 +301,7 @@ pn10 :: PTNet
 
 pn10 = pn10' { initial = MSet.fromList [1] }
 
+test4 :: H.Assertion
 test4 = H.assertBool "pn9 should NOT be m-bisimilar to pn10"
         (isNothing (isMBisim (pn9,l9) (pn10,l10)))
 
@@ -354,10 +355,11 @@ testLive2 = H.assertBool "twoProcNet2 should NOT be live" (not (isLive ss2 twoPr
         
 livenessTests = H.TestList [ H.TestLabel "Liveness test 1" (H.TestCase testLive1)
                            , H.TestLabel "Liveness test 2" (H.TestCase testLive2) ]
-        
+
+dynTests = H.TestList [ H.TestLabel "DynNet test 1" (H.TestCase dynTest1) ]
 
 main = do
-  c <- H.runTestTT $ H.TestList [mBisimTests, livenessTests]
+  c <- H.runTestTT $ H.TestList [mBisimTests, livenessTests, dynTests]
   when (H.errors c > 0 || H.failures c > 0) exitFailure
 
 
@@ -481,3 +483,7 @@ snP2P = snd . flip NPC.run NPC.new $ do
   NPC.mark initPipe (Right pipe1)
   NPC.marks initPeer (map Right [peer1,peer2,peer3,peer4])
 
+dynTest1 :: H.Assertion
+dynTest1 = H.assertBool "t1 should be enabled in snP2P"
+           (enabled (net snP2P) (initial (net snP2P)) (Trans "t1"))
+           
