@@ -6,9 +6,11 @@ module NPNTool.NPNConstr (
   new,
   -- * Monadic interface
   run, 
-  liftPTC,
+  addElemNet,
   mkPlace, mkTrans, label,
-  inT, outT,
+  inT, outT, mark, marks,
+  -- ** 'PTC.PTConstrM' and 'PTNet' interface
+  liftPTC, liftElemNet,
   -- * Generalized arcs (with expressions)
   ArcExpr (..)
   ) where
@@ -17,7 +19,6 @@ import qualified NPNTool.PTConstr as PTC
 import NPNTool.PetriNet
 import NPNTool.NPNet
 import qualified Data.Map as M
-import Control.Monad
 import Control.Monad.State
 import Control.Arrow (second)
 import Data.Monoid
@@ -25,7 +26,7 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.MultiSet (MultiSet)
 import qualified Data.MultiSet as MSet
-import Data.Maybe (fromMaybe,fromJust)
+import Data.Maybe (fromMaybe)
 import Data.Tuple (swap)
 import qualified Data.Foldable as F
 
@@ -36,7 +37,7 @@ data NPNConstr l v c =
   , key   :: Int, keyT :: Int
   , tin   :: M.Map Trans (SArc v c PTPlace)
   , tout  :: M.Map Trans (SArc v c PTPlace)
-  , nets  :: Set (ElemNet l)
+  , nets  :: [ElemNet l]
   , tlab  :: M.Map Trans l
   }
 
@@ -50,7 +51,7 @@ toNPN c =
               , post = post'
               , initial = NPMark ((p c) M.!)
               }
-  , elementNets = Set.toList (nets c)
+  , elementNets = nets c
   , labelling = toLabelling c
   , labels = Set.fromList (M.elems (tlab c))
   }
@@ -71,12 +72,15 @@ new :: NPNConstr l v c
 new = NPNConstr { p    = M.empty
                 , key  = 1, keyT = 1
                 , tin  = M.empty, tout = M.empty
-                , nets = Set.empty
+                , nets = []
                 , tlab = M.empty
                 }
 
 intToExpr :: Int -> Expr v Int
 intToExpr x = if x == 1 then Const 1 else Plus (Const 1) (intToExpr (x-1))
+
+intToList :: Int -> [Either Int (ElemNet l)]
+intToList x = if x == 0 then [] else (Left 1):(intToList (x-1))
 
 toSArc :: Ord v => MultiSet PTPlace -> SArc v Int PTPlace
 toSArc =  F.foldMap (SArc . Set.singleton . swap . (second intToExpr)) . MSet.toOccurList
@@ -84,10 +88,6 @@ toSArc =  F.foldMap (SArc . Set.singleton . swap . (second intToExpr)) . MSet.to
 isLeft :: Either t t1 -> Bool
 isLeft (Left _) = True
 isLeft (Right _) = False
-
-fromLeft :: Either t t1 -> t
-fromLeft (Left x) = x
-fromLeft (Right _) = error "fromLeft"
 
 -- | Lift a 'PTC.PTConstrM' constructions to 'NPNConstrM' monad  
 liftPTC :: Ord v => PTC.PTConstrM l a -> NPNConstrM l v a
@@ -97,7 +97,7 @@ liftPTC ptc = do
                   , PTC.key = key st, PTC.keyT = keyT st
                   , PTC.tlab = tlab st }
       (res,c') = runState ptc c
-      st' = st { p    = M.map ((:[]) . Left) $ PTC.p c'
+      st' = st { p    = M.map (intToList) $ PTC.p c'
                , key  = PTC.key c', keyT = PTC.keyT c'
                , tlab = PTC.tlab c'
                , tin  = M.unionWith mappend (tin st) (M.map toSArc (PTC.tin c'))
@@ -105,6 +105,24 @@ liftPTC ptc = do
                }
   put st'             
   return res
+
+-- | Adds an existing element net to the system
+addElemNet :: ElemNet l -> NPNConstrM l v (ElemNet l)
+addElemNet en = do
+  st <- get
+  put $ st { nets = en:(nets st) }
+  return en
+
+-- | `Lifts' an elementary net, described by the 'PTC.PTConstrM' into the
+-- 'NPNConstrM' monad and adds it to the system. 
+liftElemNet :: PTC.PTConstrM l a -> NPNConstrM l v (ElemNet l)
+liftElemNet ptc = do
+  st <- get
+  let (_,net,lab) = PTC.runL ptc PTC.new
+      en = (net,lab,initial net)
+      st' = st { nets = en : (nets st) }
+  put $ st'
+  return en
 
 -- | Creates a new place not yet present in the net  
 mkPlace :: Ord v => NPNConstrM l v PTPlace
@@ -117,6 +135,18 @@ mkTrans = liftPTC PTC.mkTrans
 -- | Specifies a label for some transition  
 label :: Ord v => Trans -> l -> NPNConstrM l v ()
 label t = liftPTC . PTC.label t
+
+-- | Marks a place with a token or an element net
+mark :: PTPlace -> Either Int (ElemNet l) -> NPNConstrM l v ()
+mark pl v = do
+  st <- get
+  put $ st { p = M.insertWith (++) pl [v] (p st) }
+
+-- | Marks a place with several tokens or element nets  
+marks :: PTPlace -> [Either Int (ElemNet l)] -> NPNConstrM l v ()
+marks pl vs = do
+  st <- get
+  put $ st { p = M.insertWith (++) pl vs (p st) }
 
 inT :: Ord v => PTPlace -> Expr v Int -> Trans -> NPNConstrM l v ()
 inT p e t = do
