@@ -19,6 +19,7 @@ import qualified NPNTool.PTConstr as PTC
 import NPNTool.PetriNet
 import NPNTool.NPNet
 import qualified Data.Map as M
+import qualified Data.IntMap as IM
 import Control.Monad.State
 import Control.Arrow (second)
 import Data.Monoid
@@ -33,11 +34,11 @@ import qualified Data.Foldable as F
 -- | Datatype for dynamically constructing Nested Petri nets
 data NPNConstr l v c =
   NPNConstr
-  { p     :: M.Map PTPlace [Either c (ElemNet l)]
-  , key   :: Int, keyT :: Int
+  { p     :: M.Map PTPlace [Either c ElemNetId]
+  , key   :: Int, keyT :: Int, keyEN :: Int
   , tin   :: M.Map Trans (SArc v c PTPlace)
   , tout  :: M.Map Trans (SArc v c PTPlace)
-  , nets  :: [ElemNet l]
+  , nets  :: IM.IntMap (ElemNet l)
   , tlab  :: M.Map Trans l
   }
 
@@ -49,7 +50,7 @@ toNPN c =
                           `Set.union` M.keysSet (tout c)
               , pre = pre'
               , post = post'
-              , initial = NPMark ((p c) M.!)
+              , initial = NPMark (p c)
               }
   , elementNets = nets c
   , labelling = toLabelling c
@@ -70,16 +71,16 @@ run c s =
 -- | New (empty) 'NPNConstr'                                       
 new :: NPNConstr l v c
 new = NPNConstr { p    = M.empty
-                , key  = 1, keyT = 1
+                , key  = 1, keyT = 1, keyEN = 1
                 , tin  = M.empty, tout = M.empty
-                , nets = []
+                , nets = IM.empty
                 , tlab = M.empty
                 }
 
 intToExpr :: Int -> Expr v Int
 intToExpr x = if x == 1 then Const 1 else Plus (Const 1) (intToExpr (x-1))
 
-intToList :: Int -> [Either Int (ElemNet l)]
+intToList :: Int -> [Either Int ElemNetId]
 intToList x = if x == 0 then [] else (Left 1):(intToList (x-1))
 
 toSArc :: Ord v => MultiSet PTPlace -> SArc v Int PTPlace
@@ -107,22 +108,25 @@ liftPTC ptc = do
   return res
 
 -- | Adds an existing element net to the system
-addElemNet :: ElemNet l -> NPNConstrM l v (ElemNet l)
+addElemNet :: ElemNet l -> NPNConstrM l v ElemNetId
 addElemNet en = do
   st <- get
-  put $ st { nets = en:(nets st) }
-  return en
+  let nets' = nets st
+      keyEN' = keyEN st + 1
+  put $ st { nets = IM.insert keyEN' en nets', keyEN = keyEN' }
+  return (ElemNetId keyEN')
 
 -- | `Lifts' an elementary net, described by the 'PTC.PTConstrM' into the
 -- 'NPNConstrM' monad and adds it to the system. 
-liftElemNet :: PTC.PTConstrM l a -> NPNConstrM l v (ElemNet l)
+liftElemNet :: PTC.PTConstrM l a -> NPNConstrM l v ElemNetId
 liftElemNet ptc = do
   st <- get
   let (_,net,lab) = PTC.runL ptc PTC.new
       en = (net,lab,initial net)
-      st' = st { nets = en : (nets st) }
-  put $ st'
-  return en
+      nets' = nets st
+      keyEN' = keyEN st + 1
+  put $ st { nets = IM.insert keyEN' en nets', keyEN = keyEN' }
+  return (ElemNetId keyEN')
 
 -- | Creates a new place not yet present in the net  
 mkPlace :: Ord v => NPNConstrM l v PTPlace
@@ -137,13 +141,13 @@ label :: Ord v => Trans -> l -> NPNConstrM l v ()
 label t = liftPTC . PTC.label t
 
 -- | Marks a place with a token or an element net
-mark :: PTPlace -> Either Int (ElemNet l) -> NPNConstrM l v ()
+mark :: PTPlace -> Either Int ElemNetId -> NPNConstrM l v ()
 mark pl v = do
   st <- get
   put $ st { p = M.insertWith (++) pl [v] (p st) }
 
 -- | Marks a place with several tokens or element nets  
-marks :: PTPlace -> [Either Int (ElemNet l)] -> NPNConstrM l v ()
+marks :: PTPlace -> [Either Int ElemNetId] -> NPNConstrM l v ()
 marks pl vs = do
   st <- get
   put $ st { p = M.insertWith (++) pl vs (p st) }

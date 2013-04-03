@@ -13,7 +13,8 @@ import NPNTool.Bisimilarity
 import NPNTool.Liveness
 import NPNTool.NPNet
 import NPNTool.CTL
-
+import qualified Data.IntMap as IM
+import qualified Data.Map as M
 import Control.Monad
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -72,7 +73,7 @@ pn3 = snd . run' $ do
 
 sn1 :: NPNet String String PTPlace
 sn1 = NPNet { net = sn1'
-           , elementNets = []
+           , elementNets = IM.empty
            , labelling = undefined
            , labels = Set.empty
            }
@@ -85,13 +86,13 @@ sn1' = Net { places = Set.fromList [1,2,3,4]
                 "t1" -> SArc $ Set.fromList [(Plus (Var "x") (Var "y"), 2),
                                        (Const 1, 3),
                                        (Var "y", 4)]
-           , initial = NPMark (\x -> case x of 1 -> [Left 1])
+           , initial = NPMark (M.fromList [(1,[Left 1])])
           } 
   where t1 = Trans "t1"
         
 sn2 :: NPNet String String PTPlace
 sn2 = NPNet { net = sn2'
-           , elementNets = []
+           , elementNets = IM.empty
            , labelling = undefined
            , labels = Set.empty
            }
@@ -108,7 +109,7 @@ sn2' = Net { places = Set.fromList [1,2,3,4,5,6]
                 "t2" -> SArc $ Set.fromList [(x, 5), (y, 6)]
                 "t3" -> SArc $ Set.fromList [(x, 5), (x, 6)]
                 "t4" -> SArc $ Set.fromList [(x, 4)]                
-           , initial = NPMark (\x -> case x of 1 -> [Left 1])
+           , initial = NPMark (M.fromList [(1,[Left 1])])
           } 
   where [t1,t2,t3,t4] = map Trans ["t1","t2","t3","t4"]
         x = Var "x" :: Expr String Int
