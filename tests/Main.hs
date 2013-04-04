@@ -412,12 +412,9 @@ enSeed, enPeer, enPipe :: PTNet
   [p6,p7,p8,p9,p10,p11,p12,p13,p14,p15] <- replicateM 10 mkPlace
   [t6,t7,t8,t9,t10,t11,t12] <- replicateM 7 mkTrans
   arc p6 t7
-  arc t6 p6
 
-  arc p7 t6
   arc p7 t12
   arc t7 p7
-  arc t11 p7
 
   arc p8 t8
   arc t7 p8
@@ -432,15 +429,15 @@ enSeed, enPeer, enPipe :: PTNet
   arc t9 p11
 
   arc p12 t9
-  arc t6 p12
 
   arc p13 t12
-  arc p13 t6
-  arc t11 p13
   arc t9 p13
 
   arc p14 t10
   arc t12 p14
+
+  arc t11 p6
+  arc t11 p12
 
   arc p15 t11
   arc t10 p15
@@ -509,5 +506,5 @@ p2pBsimTest2 = H.assertBool "a-trail for place 2 should be m-bisimilar to EN_pee
                (isJust (isMBisim (alphaTrail (snP2P) 2) (enPeer,lPeer)))
 
 p2pBsimTest3 :: H.Assertion
-p2pBsimTest3 = H.assertBool "a-trail for place 3 should NOT be m-bisimilar to EN_pipe"
-               (isNothing (isMBisim (alphaTrail (snP2P) 3) (enPipe,lPipe)))               
+p2pBsimTest3 = H.assertBool "a-trail for place 3 should be m-bisimilar to EN_pipe"
+               (isJust (isMBisim (alphaTrail (snP2P) 3) (enPipe,lPipe)))               
