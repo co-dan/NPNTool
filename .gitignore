@@ -6,3 +6,8 @@ cabal-dev
 *.chs.h
 .virthualenv
 test
+*.aux
+*.prof
+*.ps
+*.hp
+
