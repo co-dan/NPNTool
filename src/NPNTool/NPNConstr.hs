@@ -31,6 +31,8 @@ import Data.Maybe (fromMaybe)
 import Data.Tuple (swap)
 import qualified Data.Foldable as F
 
+import Debug.Trace
+
 -- | Datatype for dynamically constructing Nested Petri nets
 data NPNConstr l v c =
   NPNConstr
@@ -94,11 +96,11 @@ isLeft (Right _) = False
 liftPTC :: Ord v => PTC.PTConstrM l a -> NPNConstrM l v a
 liftPTC ptc = do
   st <- get
-  let c = PTC.new { PTC.p = M.map (length . filter isLeft) $ p st
+  let c = PTC.new { PTC.p = M.map (const 0) $ p st
                   , PTC.key = key st, PTC.keyT = keyT st
                   , PTC.tlab = tlab st }
       (res,c') = runState ptc c
-      st' = st { p    = M.map (intToList) $ PTC.p c'
+      st' = st { p    = M.unionWith (++) (p st) (M.map (intToList) $ PTC.p c')
                , key  = PTC.key c', keyT = PTC.keyT c'
                , tlab = PTC.tlab c'
                , tin  = M.unionWith mappend (tin st) (M.map toSArc (PTC.tin c'))
@@ -120,6 +122,7 @@ addElemNet en = do
 -- 'NPNConstrM' monad and adds it to the system. 
 liftElemNet :: PTC.PTConstrM l a -> NPNConstrM l v ElemNetId
 liftElemNet ptc = do
+  trace "liftElemNet" $ return ()
   st <- get
   let (_,net,lab) = PTC.runL ptc PTC.new
       en = (net,lab,initial net)
@@ -144,7 +147,8 @@ label t = liftPTC . PTC.label t
 mark :: PTPlace -> Either Int ElemNetId -> NPNConstrM l v ()
 mark pl v = do
   st <- get
-  put $ st { p = M.insertWith (++) pl [v] (p st) }
+  let p' = p st
+  p' `seq` put $ st { p = M.insertWith (++) pl [v] p' }
 
 -- | Marks a place with several tokens or element nets  
 marks :: PTPlace -> [Either Int ElemNetId] -> NPNConstrM l v ()
