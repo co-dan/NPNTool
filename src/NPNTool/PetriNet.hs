@@ -1,5 +1,6 @@
 {-# LANGUAGE Rank2Types, FlexibleContexts #-}
 {-# LANGUAGE MultiParamTypeClasses, FunctionalDependencies #-}
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE TypeSynonymInstances, FlexibleInstances #-}
 module NPNTool.PetriNet (
   -- * Datatypes
@@ -109,17 +110,17 @@ reachabilityGraph' :: (DynNet (Net p t n m) p t m, Ord p, Ord (m p)) =>
                       (Net p t n m) -> (NodeMap (m p), Gr (m p) t)
 reachabilityGraph' net = snd $ run G.empty $ 
                         insMapNodeM (initial net) >> go (Set.singleton (initial net))
-  where go work | Set.null work = return ()
-                | otherwise     = do
+  where go !work | Set.null work = return ()
+                 | otherwise     = do
           let m = (head . Set.toList) work
                   --- Better way to pick an arbitrary M from the set Work?
               work' = Set.delete m work
           work'' <- F.foldrM (act net m) work' (trans net)
-          go work'' 
+          go $! work'' 
   
 act :: (G.DynGraph g, DynNet net p t m, Ord p, Ord (m p)) => 
        net -> m p -> t -> Set (m p) -> NodeMapM (m p) t g (Set (m p))
-act net m t w =
+act net m !t !w =
   if enabled net m t
   then do 
      let m' = fire net m t
@@ -130,7 +131,7 @@ act net m t w =
                   insMapNodeM m'
                   return (Set.insert m' w)
      insMapEdgeM (m,m',t)
-     return w'
+     return $! w'
   else return w
   
 -- | Post-transitions of a place
