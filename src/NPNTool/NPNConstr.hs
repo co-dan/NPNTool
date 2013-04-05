@@ -31,7 +31,6 @@ import Data.Maybe (fromMaybe)
 import Data.Tuple (swap)
 import qualified Data.Foldable as F
 
-import Debug.Trace
 
 -- | Datatype for dynamically constructing Nested Petri nets
 data NPNConstr l v c =
@@ -122,7 +121,6 @@ addElemNet en = do
 -- 'NPNConstrM' monad and adds it to the system. 
 liftElemNet :: PTC.PTConstrM l a -> NPNConstrM l v ElemNetId
 liftElemNet ptc = do
-  trace "liftElemNet" $ return ()
   st <- get
   let (_,net,lab) = PTC.runL ptc PTC.new
       en = (net,lab,initial net)
