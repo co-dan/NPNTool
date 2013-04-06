@@ -6,7 +6,7 @@ import System.Exit (exitFailure)
 
 import NPNTool.PetriNet
 import NPNTool.PTConstr
-import NPNTool.NPNConstr (arcExpr, liftPTC, liftElemNet, addElemNet)
+import NPNTool.NPNConstr (arcExpr, liftPTC, liftElemNet, addElemNet, NPNConstrM)
 import qualified NPNTool.NPNConstr as NPC
 import NPNTool.Graphviz
 import NPNTool.Bisimilarity
@@ -17,6 +17,7 @@ import NPNTool.CTL
 import qualified Data.IntMap as IM
 import qualified Data.Map as M
 import Control.Monad
+import Control.Monad.Writer
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.MultiSet (MultiSet)
@@ -508,3 +509,160 @@ p2pBsimTest2 = H.assertBool "a-trail for place 2 should be m-bisimilar to EN_pee
 p2pBsimTest3 :: H.Assertion
 p2pBsimTest3 = H.assertBool "a-trail for place 3 should be m-bisimilar to EN_pipe"
                (isJust (isMBisim (alphaTrail (snP2P) 3) (enPipe,lPipe)))               
+
+--------------------------------------------------
+-- Dining philosophers
+
+philTest :: Int -> H.Test
+philTest n = H.TestCase $ do
+  let (ps, npn) = diningPhils n
+      sn = net npn
+      ss = reachabilityGraph sn
+      (_,agent,agentLab) = runL philAgent new -- normal agent
+      (_,lagent,lagentLab) = runL lastPhilAgent new -- last agent
+  H.assertBool "Normal agent liveness" $
+    isLive (reachabilityGraph agent) agent
+  H.assertBool "Last agent liveness" $
+    isLive (reachabilityGraph lagent) lagent
+  H.assertBool "System net liveness" $
+    isLive ss sn
+  mapM_ (H.assertBool "Agent is m-bisimilar to the alpha-trail net"
+        . isJust
+        . isMBisim (agent,agentLab)
+        . alphaTrail npn) 
+    (init ps)
+  H.assertBool "Last agent is m-bisimilar to the alpha-trail net" $
+    isJust (isMBisim (lagent,lagentLab)
+                     (alphaTrail npn (last ps)))
+  return ()
+  
+-- Labels  
+data ForkLabel = PickR | PickL | Put
+               deriving (Show,Eq,Ord)
+-- Variables                        
+data V = X -- we only need one
+       deriving (Show,Eq,Ord)
+
+philAgent :: PTConstrM ForkLabel ()
+philAgent = do
+  [p1,p2,p3] <- replicateM 3 mkPlace
+  [pickL,pickR,put] <- replicateM 3 mkTrans
+  label pickL PickL
+  label pickR PickR
+  label put Put
+  mark p1
+  arc p1 pickR
+  arc pickR p2
+  arc p2 pickL
+  arc pickL p3
+  arc p3 put
+  arc put p1
+
+  s1 <- mkPlace
+  walk <- mkTrans
+  ret <- mkTrans
+  arc p1 walk
+  arc walk s1
+  arc s1 ret
+  arc ret p1
+
+lastPhilAgent :: PTConstrM ForkLabel ()
+lastPhilAgent = do
+  [p1,p2,p3] <- replicateM 3 mkPlace
+  [pickL,pickR,put] <- replicateM 3 mkTrans
+  label pickL PickL
+  label pickR PickR
+  label put Put
+  mark p1
+  arc p1 pickL
+  arc pickL p2
+  arc p2 pickR
+  arc pickR p3
+  arc p3 put
+  arc put p1
+
+  s1 <- mkPlace
+  walk <- mkTrans
+  ret <- mkTrans
+  arc p1 walk
+  arc walk s1
+  arc s1 ret
+  arc ret p1
+
+
+-- returns (Fork_i,PickL_i,Put_i)
+phil :: NPNConstrM ForkLabel V (PTPlace,Trans,Trans)
+phil = do
+  [fork,p1,p2,p3] <- replicateM 4 NPC.mkPlace
+  [pickL,pickR,put] <- replicateM 3 NPC.mkTrans
+  agent <- NPC.liftElemNet philAgent
+  let x = Var X
+  NPC.label pickL PickL
+  NPC.label pickR PickR
+  NPC.label put Put
+  NPC.mark fork (Left 1)
+  NPC.mark p1 (Right agent)
+
+  
+  NPC.arc fork pickR
+  NPC.arcExpr p1 x pickR
+  NPC.arcExpr pickR x p2
+  NPC.arcExpr p2 x pickL
+  NPC.arcExpr pickL x p3
+  NPC.arcExpr p3 x put
+  NPC.arcExpr put x p1
+  NPC.arc put fork
+    
+  return (fork,pickL,put)
+
+lastPhil :: NPNConstrM ForkLabel V (PTPlace,Trans,Trans)
+lastPhil = do
+  [fork,p1,p2,p3] <- replicateM 4 NPC.mkPlace
+  [pickL,pickR,put] <- replicateM 3 NPC.mkTrans
+  agent <- NPC.liftElemNet lastPhilAgent
+  let x = Var X
+  NPC.label pickL PickL
+  NPC.label pickR PickR
+  NPC.label put Put
+  NPC.mark fork (Left 1)
+  NPC.mark p1 (Right agent)
+
+  NPC.arcExpr p1 x pickL
+  NPC.arcExpr pickL x p2
+  NPC.arcExpr p2 x pickR
+  NPC.arc fork pickR
+  NPC.arcExpr pickR x p3
+  NPC.arcExpr p3 x put
+  NPC.arcExpr put x p1
+  NPC.arc put fork
+    
+  return (fork,pickL,put)
+
+
+-- Works only for n >= 2
+cyclePhils :: Int -> WriterT [PTPlace] (NPNConstrM ForkLabel V) ()
+cyclePhils n = do
+  (fork1,pickL1,put1) <- lift phil
+  tell [fork1 + 1]
+  (pickL,put) <- midPhils (n-2) (pickL1,put1)
+  (forkLast,pickLLast,putLast) <- lift lastPhil
+  tell [forkLast + 1]
+  lift $ do
+    NPC.arc put forkLast
+    NPC.arc forkLast pickL
+    NPC.arc fork1 pickLLast
+    NPC.arc putLast fork1
+  
+midPhils :: Int -> (Trans,Trans) -> WriterT [PTPlace] (NPNConstrM ForkLabel V) (Trans,Trans)
+midPhils n interf | n == 0    = return interf
+                  | otherwise = do
+  (pl,put) <- midPhils (n-1) interf
+  (f',pl',put') <- lift phil
+  tell [f' + 1]
+  lift $ NPC.arc put f' >> NPC.arc f' pl
+  return (pl',put')
+  
+  
+diningPhils :: Int -> ([PTPlace], NPNet ForkLabel V Int)
+diningPhils n = (places, npnet)
+  where ((_,places),npnet) = NPC.run (runWriterT (cyclePhils n)) NPC.new
