@@ -18,6 +18,8 @@ import qualified Data.Foldable as F
 import Data.Graph.Inductive hiding (NodeMap)
 import Data.Tree
 
+import Debug.Trace
+
 -- | Strong bisimulation
 isBisim :: Eq l => (PTNet, Labelling l) -> (PTNet, Labelling l) -> (PTMark, PTMark) -> Bool
 isBisim (pn1,l1) (pn2,l2) (m1,m2) = isJust $ runStateT (bisim (pn1,l1) (pn2,l2) (m1,m2)) S.empty
@@ -50,10 +52,10 @@ groupByLabel l (t:ts) = ts1:groupByLabel l ts
 
 findPath :: Eq l => (SS, Labelling l) -> PTNet -> NodeMap PTMark -> Maybe l -> PTMark -> [PTMark]
 findPath (ss,ll) pt nm l from =
-  (concatMap leaves . filter (nonS . flatten) $ findPath' (ss,ll) nm l from) 
+  (concatMap leaves . filter (nonS . flatten) $ findPath' (ss,ll) nm l from)
   where nonS xs = isNothing l
                   || any (any ((==l) . ll . snd) . lsuc ss . nodeFromLab nm) xs
-        
+                              
 nodeFromLab :: NodeMap PTMark -> PTMark -> Node
 nodeFromLab nm m = case lookupNode nm m of
   Just (n,_) -> n
@@ -76,7 +78,7 @@ nextNode lab l =
 -- Nodes that can be reached via silent transitions
 growPath :: Eq l => (SS, Labelling l) -> NodeMap PTMark
             -> [PTMark] -> [PTMark]
-growPath (ss,ll) nm ms =
+growPath (ss,ll) nm ms = ms ++
   concatMap (concatMap leaves . findPath' (ss,ll) nm Nothing) ms 
 
 -- | Whether two Petri Net are m-bisimilar
@@ -94,6 +96,7 @@ mBisim :: (Show l,Eq l) =>
           (PTNet, Labelling l) -> (PTNet, Labelling l) ->
           (PTMark, PTMark) -> StateT (Set (PTMark,PTMark)) (ReaderT (SM,SM) Maybe) Bool
 mBisim (pt1,l1) (pt2,l2) (m1,m2) = do
+  trace ("m1 = " ++ show m1 ++ " ; m2 = " ++ show m2) $ return ()
   r <- get
   if S.member (m1,m2) r
     then return True
@@ -110,6 +113,11 @@ mBisim (pt1,l1) (pt2,l2) (m1,m2) = do
           m1' = fire pt1 m1 t1
       ((ss1,nm1),(ss2,nm2)) <- ask
       let nodes = growPath (ss2,l2) nm2 $ findPath (ss2,l2) pt2 nm2 l m2
+      trace ("l = " ++ show l ++ ", nodes = " ++ show nodes) $ return ()
+      if (null nodes) then do
+        traceShow l $ return ()
+       else return ()
+
       guard (not (null nodes)) -- there exist a path ==> m2'
       mapM_ (\m2' -> mBisim (pt1,l1) (pt2,l2) (m1',m2')) nodes -- all of them are m-bisimilar
     sim2 t2 = do

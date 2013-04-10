@@ -59,5 +59,6 @@ Test-Suite general-tests
                        multiset ==0.2.2,    
                        containers >=0.5,
                        nctlmodelchecker,
+                       mtl,
                        HUnit ==1.2.5.*
 
