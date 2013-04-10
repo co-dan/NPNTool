@@ -322,9 +322,30 @@ mBisimTests = H.TestList [ H.TestLabel "test1" (H.TestCase test1)
                          , H.TestLabel "Liveness test for p2p 2"
                            (H.TestCase p2pBsimTest2)
                          , H.TestLabel "Liveness test for p2p 2"
-                           (H.TestCase p2pBsimTest3)]
+                           (H.TestCase p2pBsimTest3)
+                         , H.TestLabel "pn11"
+                           (H.TestCase (isJust (isMBisim (pn11,l11) (pn11,l11))))]
 
 
+((),pn11,l11) = flip runL new $ do
+  [p1,p2,p3] <- replicateM 3 mkPlace
+  conn p1 p2 A
+  conn p2 p1 B
+  [tr1,tr2] <- replicateM 2 mkTrans
+  arc p1 tr1
+  arc tr1 p3
+  arc p3 tr2
+  arc tr2 p1
+  mark p1
+  return ()
+
+((),pn12,l12) = flip runL new $ do
+  [p1,p2] <- replicateM 2 mkPlace
+  conn p1 p2 A
+  conn p2 p1 B
+  mark p1
+  return ()
+  
 ((a,b,idle),twoProcNet') = run' $ do
   let pA = Trans "PickA"
       pB = Trans "PickB"
