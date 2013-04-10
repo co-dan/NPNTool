@@ -324,7 +324,7 @@ mBisimTests = H.TestList [ H.TestLabel "test1" (H.TestCase test1)
                          , H.TestLabel "Liveness test for p2p 2"
                            (H.TestCase p2pBsimTest3)
                          , H.TestLabel "pn11"
-                           (H.TestCase (isJust (isMBisim (pn11,l11) (pn11,l11))))]
+                           (H.TestCase $ H.assertBool "" (isJust (isMBisim (pn11,l11) (pn11,l11))))]
 
 
 ((),pn11,l11) = flip runL new $ do
