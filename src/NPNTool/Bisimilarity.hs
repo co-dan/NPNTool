@@ -1,6 +1,7 @@
-module NPNTool.Bisimilarity (
-  isBisim,
-  isMBisim) where
+module NPNTool.Bisimilarity -- (
+  -- isBisim,
+  -- isMBisim)
+       where
 
 import NPNTool.NPNet
 import NPNTool.PetriNet
@@ -52,7 +53,7 @@ findPath (ss,ll) pt nm l from =
   (concatMap leaves $ findPath' (ss,ll) nm l from) \\ start
   where start = if isNothing l -- if label is silet, we can use the empty path
                 then []
-                else growPath (pt,ll) [from]
+                else growPath (ss,ll) nm [from]
                      -- for a non-silent label we must remove all the paths that
                      -- do not actually contain a label
 
@@ -75,14 +76,14 @@ nextNode :: Eq l => Labelling l -> Maybe l -> CFun PTMark PTTrans [Node]
 nextNode lab l =
   map snd . filter (\(x,_) -> lab x == l || isNothing (lab x)) . context4l'
 
--- Nodes that can be reached via silent transitions  
-growPath :: (PTNet, Labelling l) -> [PTMark] -> [PTMark]
-growPath (pn,lab) ms = ms ++ 
-  concatMap (\m -> map (fire pn m) (filter (shouldFire m) (S.toList (trans pn)))) ms
-  where shouldFire m t = enabled pn m t && isNothing (lab t)
+-- Nodes that can be reached via silent transitions
+growPath :: Eq l => (SS, Labelling l) -> NodeMap PTMark
+            -> [PTMark] -> [PTMark]
+growPath (ss,ll) nm ms =
+  concatMap (concatMap leaves . findPath' (ss,ll) nm Nothing) ms 
 
 -- | Whether two Petri Net are m-bisimilar
-isMBisim :: Eq l =>
+isMBisim :: (Show l, Eq l) =>
             (PTNet, Labelling l) -> (PTNet, Labelling l) -> Maybe (Bool, Set (PTMark, PTMark))
 isMBisim (pt1,l1) (pt2,l2) =
   runReaderT 
@@ -92,7 +93,7 @@ isMBisim (pt1,l1) (pt2,l2) =
          
 type SM = (SS, NodeMap PTMark)
 
-mBisim :: Eq l =>
+mBisim :: (Show l,Eq l) =>
           (PTNet, Labelling l) -> (PTNet, Labelling l) ->
           (PTMark, PTMark) -> StateT (Set (PTMark,PTMark)) (ReaderT (SM,SM) Maybe) Bool
 mBisim (pt1,l1) (pt2,l2) (m1,m2) = do
@@ -111,14 +112,14 @@ mBisim (pt1,l1) (pt2,l2) (m1,m2) = do
       let l = l1 t1
           m1' = fire pt1 m1 t1
       ((ss1,nm1),(ss2,nm2)) <- ask
-      let nodes = growPath (pt2,l2) $ findPath (ss2,l2) pt2 nm2 l m2
+      let nodes = growPath (ss2,l2) nm2 $ findPath (ss2,l2) pt2 nm2 l m2
       guard (not (null nodes)) -- there exist a path ==> m2'
       mapM_ (\m2' -> mBisim (pt1,l1) (pt2,l2) (m1',m2')) nodes -- all of them are m-bisimilar
     sim2 t2 = do
       let l = l2 t2
           m2' = fire pt2 m2 t2
       ((ss1,nm1),(ss2,nm2)) <- ask
-      let nodes = growPath (pt1,l1) $ findPath (ss1,l1) pt1 nm1 l m1
+      let nodes = growPath (ss1,l1) nm1 $ findPath (ss1,l1) pt1 nm1 l m1
       guard (not (null nodes)) -- there exist a path ==> m1'
       mapM_ (\m1' -> mBisim (pt1,l1) (pt2,l2) (m1',m2')) nodes -- all of them are m-bisimilar
       
