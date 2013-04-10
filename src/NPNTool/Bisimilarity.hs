@@ -1,6 +1,7 @@
-module NPNTool.Bisimilarity (
-  isBisim,
-  isMBisim) where
+module NPNTool.Bisimilarity -- (
+  -- isBisim,
+  -- isMBisim) 
+       where
 
 import NPNTool.NPNet
 import NPNTool.PetriNet
@@ -49,20 +50,17 @@ groupByLabel l (t:ts) = ts1:groupByLabel l ts
 
 findPath :: Eq l => (SS, Labelling l) -> PTNet -> NodeMap PTMark -> Maybe l -> PTMark -> [PTMark]
 findPath (ss,ll) pt nm l from =
-  (concatMap leaves $ findPath' (ss,ll) nm l from) \\ start
-  where start = if isNothing l -- if label is silet, we can use the empty path
-                then []
-                else growPath (ss,ll) nm [from]
-                     -- for a non-silent label we must remove all the paths that
-                     -- do not actually contain a label
+  (concatMap leaves . filter (nonS . flatten) $ findPath' (ss,ll) nm l from) 
+  where nonS xs = isNothing l
+                  || any (any ((==l) . ll . snd) . lsuc ss . nodeFromLab nm) xs
+        
+nodeFromLab :: NodeMap PTMark -> PTMark -> Node
+nodeFromLab nm m = case lookupNode nm m of
+  Just (n,_) -> n
+  Nothing    -> error "Marking not reachable"
 
 findPath' :: Eq l => (SS, Labelling l) -> NodeMap PTMark -> Maybe l -> PTMark -> [Tree PTMark]
-findPath' (ss,ll) nm l from = xdffWith (nextNode ll l) lab' [nodeFromLab from] ss
-  where nodeFromLab :: PTMark -> Node
-        nodeFromLab m = case lookupNode nm m of
-          Just (n,_) -> n
-          Nothing    -> error "Marking not reachable"
-        
+findPath' (ss,ll) nm l from = xdffWith (nextNode ll l) lab' [nodeFromLab nm from] ss
 
 leaves :: Tree t -> [t]
 leaves (Node x []) = [x]
