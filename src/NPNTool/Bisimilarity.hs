@@ -1,7 +1,6 @@
-module NPNTool.Bisimilarity -- (
-  -- isBisim,
-  -- isMBisim)
-       where
+module NPNTool.Bisimilarity (
+  isBisim,
+  isMBisim) where
 
 import NPNTool.NPNet
 import NPNTool.PetriNet
