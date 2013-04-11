@@ -6,6 +6,7 @@ module NPNTool.Bisimilarity -- (
 import NPNTool.NPNet
 import NPNTool.PetriNet
 import NPNTool.NodeMap
+import NPNTool.DFSM
 
 import Control.Monad.State
 import Control.Monad.Reader
@@ -17,8 +18,6 @@ import qualified Data.Foldable as F
 
 import Data.Graph.Inductive hiding (NodeMap)
 import Data.Tree
-
-import Debug.Trace
 
 -- | Strong bisimulation
 isBisim :: Eq l => (PTNet, Labelling l) -> (PTNet, Labelling l) -> (PTMark, PTMark) -> Bool
@@ -51,18 +50,24 @@ groupByLabel l (t:ts) = ts1:groupByLabel l ts
   where (ts1,ts2) = partition ((== l t) . l) ts
 
 findPath :: Eq l => (SS, Labelling l) -> PTNet -> NodeMap PTMark -> Maybe l -> PTMark -> [PTMark]
-findPath (ss,ll) pt nm l from =
-  (concatMap leaves . filter (nonS . flatten) $ findPath' (ss,ll) nm l from)
-  where nonS xs = isNothing l
-                  || any (any ((==l) . ll . snd) . lsuc ss . nodeFromLab nm) xs
+findPath (ss,ll) pt nm l from = start ++
+  growPath (ss,ll) nm (mapMaybe id . concatMap flatten $ findPath' (ss,ll) nm l from) 
+  where start | isNothing l = [from]
+              | otherwise   = []
                               
 nodeFromLab :: NodeMap PTMark -> PTMark -> Node
 nodeFromLab nm m = case lookupNode nm m of
   Just (n,_) -> n
   Nothing    -> error "Marking not reachable"
 
-findPath' :: Eq l => (SS, Labelling l) -> NodeMap PTMark -> Maybe l -> PTMark -> [Tree PTMark]
-findPath' (ss,ll) nm l from = xdffWith (nextNode ll l) lab' [nodeFromLab nm from] ss
+findPath' :: Eq l => (SS, Labelling l) -> NodeMap PTMark 
+             -> Maybe l -> PTMark -> [Tree (Maybe PTMark)]
+findPath' (ss,ll) nm l from = xdffWithP (nextNode ll l) (\n -> fmap lab' . isfin ll l ss n) [nodeFromLab nm from] ss
+
+isfin :: Eq l => Labelling l -> Maybe l -> SS -> Node -> Context PTMark PTTrans -> Maybe (Context PTMark PTTrans)
+isfin lab l ss n ctx = case any (\(toNode,t) -> toNode==node' ctx && lab t==l) (lsuc ss n) of
+  False -> Nothing
+  True  -> Just ctx
 
 leaves :: Tree t -> [t]
 leaves (Node x []) = [x]
@@ -79,7 +84,7 @@ nextNode lab l =
 growPath :: Eq l => (SS, Labelling l) -> NodeMap PTMark
             -> [PTMark] -> [PTMark]
 growPath (ss,ll) nm ms = ms ++
-  concatMap (concatMap leaves . findPath' (ss,ll) nm Nothing) ms 
+  concatMap (mapMaybe id . concatMap leaves . findPath' (ss,ll) nm Nothing) ms 
 
 -- | Whether two Petri Net are m-bisimilar
 isMBisim :: (Show l, Eq l) =>
@@ -96,7 +101,6 @@ mBisim :: (Show l,Eq l) =>
           (PTNet, Labelling l) -> (PTNet, Labelling l) ->
           (PTMark, PTMark) -> StateT (Set (PTMark,PTMark)) (ReaderT (SM,SM) Maybe) Bool
 mBisim (pt1,l1) (pt2,l2) (m1,m2) = do
-  trace ("m1 = " ++ show m1 ++ " ; m2 = " ++ show m2) $ return ()
   r <- get
   if S.member (m1,m2) r
     then return True
@@ -113,11 +117,6 @@ mBisim (pt1,l1) (pt2,l2) (m1,m2) = do
           m1' = fire pt1 m1 t1
       ((ss1,nm1),(ss2,nm2)) <- ask
       let nodes = growPath (ss2,l2) nm2 $ findPath (ss2,l2) pt2 nm2 l m2
-      trace ("l = " ++ show l ++ ", nodes = " ++ show nodes) $ return ()
-      if (null nodes) then do
-        traceShow l $ return ()
-       else return ()
-
       guard (not (null nodes)) -- there exist a path ==> m2'
       mapM_ (\m2' -> mBisim (pt1,l1) (pt2,l2) (m1',m2')) nodes -- all of them are m-bisimilar
     sim2 t2 = do

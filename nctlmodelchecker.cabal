@@ -26,7 +26,8 @@ Library
                        NPNTool.NPNConstr,
                        NPNTool.XMLReader,
                        NPNTool.StateSpace,
-                       NPNTool.NodeMap       
+                       NPNTool.NodeMap,
+                       NPNTool.DFSM       
   hs-source-dirs:      src/   
   other-modules:       NPNTool.NCTL,
                        NPNTool.ModelChecker
