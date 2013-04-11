@@ -133,8 +133,8 @@ droneTest = H.TestCase $ do
   -- NPC.mark base (Right d1)
   -- return [base]
 
-        -- if (null nodes) then do
-        -- traceShow l $ return ()
-        -- trace ("m1 = " ++ show m1 ++ " ; m2 = " ++ show m2) $ return ()
-        -- else return ()
-
+      -- if (null nodes) then do
+      --   trace "sim1" $ return ()
+      --   traceShow l $ return ()
+      --   traceShow m1 $ traceShow m2 $ return ()
+      --  else return ()
