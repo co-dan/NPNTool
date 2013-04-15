@@ -8,9 +8,10 @@ module NPNTool.NPNConstr (
   run, 
   addElemNet,
   mkPlace, mkTrans, label,
+  insPlace, 
   inT, outT, mark, marks,
   -- ** 'PTC.PTConstrM' and 'PTNet' interface
-  liftPTC, liftElemNet,
+  liftPTC, liftElemNet, insElemNet,
   -- * Generalized arcs (with expressions)
   ArcExpr (..)
   ) where
@@ -49,6 +50,7 @@ toNPN c =
   { net = Net { places = M.keysSet (p c)
               , trans   = M.keysSet (tin c)
                           `Set.union` M.keysSet (tout c)
+                          `Set.union` M.keysSet (tlab c)
               , pre = pre'
               , post = post'
               , initial = NPMark (p c)
@@ -117,6 +119,17 @@ addElemNet en = do
   put $ st { nets = IM.insert keyEN' en nets', keyEN = keyEN' }
   return (ElemNetId keyEN')
 
+-- | Useful for working with a priori correct XML data,
+--  generally use 'addElemNet' instead
+insElemNet :: Int -> PTC.PTConstrM l a -> NPNConstrM l v a
+insElemNet k ptc = do
+  st <- get
+  let (r,net,lab) = PTC.runL ptc PTC.new
+      en = (net,lab,initial net)
+      nets' = nets st
+  put $ st { nets = IM.insert k en nets' }
+  return r
+
 -- | `Lifts' an elementary net, described by the 'PTC.PTConstrM' into the
 -- 'NPNConstrM' monad and adds it to the system. 
 liftElemNet :: PTC.PTConstrM l a -> NPNConstrM l v ElemNetId
@@ -136,6 +149,10 @@ mkPlace = liftPTC PTC.mkPlace
 -- | Creates a new tranisition not yet present in the net          
 mkTrans :: Ord v => NPNConstrM l v Trans
 mkTrans = liftPTC PTC.mkTrans
+
+-- | Inserts a place into the system
+insPlace :: Ord v => PTPlace -> NPNConstrM l v ()
+insPlace = liftPTC . PTC.insPlace
 
 -- | Specifies a label for some transition  
 label :: Ord v => Trans -> l -> NPNConstrM l v ()
