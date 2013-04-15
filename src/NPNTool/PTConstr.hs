@@ -6,7 +6,7 @@ module NPNTool.PTConstr (
   new,
   -- * Monadic interface
   run, runL,
-  mkPlace, insPlace, mkTrans,
+  mkPlace, insPlace, mkTrans, 
   label, mark, marking,
   inT, outT, inTn, outTn,
   -- * Generalized arcs
