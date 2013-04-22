@@ -119,7 +119,7 @@ addElemNet en = do
   put $ st { nets = IM.insert keyEN' en nets', keyEN = keyEN' }
   return (ElemNetId keyEN')
 
--- | Useful for working with a priori correct XML data,
+-- | Useful for working with a priori correct data,
 --  generally use 'addElemNet' instead
 insElemNet :: Int -> PTC.PTConstrM l a -> NPNConstrM l v a
 insElemNet k ptc = do

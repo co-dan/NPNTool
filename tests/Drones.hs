@@ -114,7 +114,9 @@ droneTest = H.TestCase $ do
     bases
   return ()
 
-
+droneTestXML = H.TestCase $ do
+  npn <- runConstr "./test/Drones.npnets"
+  
   -- [base,air,orbiting,fin] <- replicateM 4 NPC.mkPlace
   -- [leave,orbit,attack,ret] <- replicateM 4 NPC.mkTrans
   
