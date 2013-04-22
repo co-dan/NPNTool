@@ -9,4 +9,11 @@
 * NPConstr
   - toSArc function: change to make use of possible monoidal structure of SArc?
 * XMLReader
-  - idToPlace and idToTrans are too ugly
+  - Power у monoms
+  - Добавить тестов 
+  - Различать tokenAtomic и сетевые токены
+  - Переменные на переходах -> переменные на дугах
+  - Instances у typeAtomic
+  - Variables в элементных сетях 
+  - Marking // map // marking
+    

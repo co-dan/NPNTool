@@ -44,6 +44,7 @@ toPTNet :: forall l. PTConstr l -> PTNet
 toPTNet c = Net { places  = M.keysSet (p c)
                 , trans   = M.keysSet (tin c)
                             `Set.union` M.keysSet (tout c)
+                            `Set.union` M.keysSet (tlab c)
                 , pre     = pre'
                 , post    = post'
                 , initial = MSet.fromMap (p c)
