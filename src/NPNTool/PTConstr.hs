@@ -5,7 +5,7 @@ module NPNTool.PTConstr (
   -- * Operations
   new,
   -- * Monadic interface
-  run, runL,
+  run, runL, runConstr,
   mkPlace, insPlace, mkTrans, 
   label, mark, marking,
   inT, outT, inTn, outTn,
@@ -103,7 +103,7 @@ class Arc k where
   type Co k :: *
   -- | Specifies an arc from some object to its co-object
   arc :: k -> Co k -> PTConstrM l ()
-
+  
 -- | Specifies @n@ arcs  
 arcn :: Arc k => k -> Co k -> Int -> PTConstrM l ()
 arcn a b n = replicateM_ n $ arc a b
@@ -148,6 +148,12 @@ run :: PTConstrM l a -> PTConstr l -> (a, PTNet)
 run c s =
   let (a, s') = runState c s
   in (a, toPTNet s')
+
+-- | Runs a @PTConstrM@ monad and returns a @PTConstr@ 
+runConstr :: PTConstrM l a -> PTConstr l -> PTConstr l
+runConstr c s =
+  let (a, s') = runState c s
+  in s'
 
 -- | Runs a @PTConstrM@ monad and returns a Petri Net together with its labelling
 -- and a result
