@@ -17,6 +17,7 @@ cabal-version:       >=1.8
 Library 
   Exposed-modules:     NPNTool.PetriNet,
                        NPNTool.CTL,
+                       NPNTool.Unfoldings,
                        NPNTool.Bisimilarity,
                        NPNTool.AlphaTrail,
                        NPNTool.Liveness,
