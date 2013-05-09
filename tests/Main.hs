@@ -27,6 +27,8 @@ import Data.Maybe (isJust,isNothing)
 import Data.Monoid
 import qualified Data.Foldable as F
 
+import Unfoldings hiding (run')
+
 
 pn1 :: PTNet
 pn1 = Net { places = Set.fromList [1,2,3,4]
@@ -394,7 +396,7 @@ livenessTests = H.TestList
 dynTests = H.TestList [ H.TestLabel "DynNet test 1" (H.TestCase dynTest1) ]
 
 main = do
-  c <- H.runTestTT $ H.TestList [mBisimTests, livenessTests, dynTests]
+  c <- H.runTestTT $ H.TestList [mBisimTests, livenessTests, dynTests, conflictTests]
   when (H.errors c > 0 || H.failures c > 0) exitFailure
 
 
