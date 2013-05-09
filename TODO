@@ -17,3 +17,7 @@
   - Variables в элементных сетях 
   - Marking // map // marking
     
+* PROJECT Unfoldings
+** TODO Faster PossibleExtentions procedure
+*** Faster search for conflicts
+*** UpdatePotExt
