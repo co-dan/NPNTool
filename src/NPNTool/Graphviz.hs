@@ -1,8 +1,9 @@
 -- | Simple module for producing Graphviz diagrams of Petri Nets
-module NPNTool.Graphviz (drawPT, drawWithLab) where
+module NPNTool.Graphviz (drawPT, drawWithLab,drawBP) where
 
 import NPNTool.PetriNet
 import NPNTool.NPNet
+import NPNTool.Unfoldings  
 import Data.Set (Set)
 import qualified Data.Set as S
 import Data.Foldable (Foldable)
@@ -70,3 +71,32 @@ drawWithLab net lab =
     , "    " ++ concatMap (showPostLab net) (S.toList tr)
     , "}"]
   where tr = S.map (\x -> (x, lab x)) (trans net)
+
+
+-- | Draws a branching process
+drawBP :: BProc -> String
+drawBP bp@(net,(hp,ht)) = unlines 
+    [ "digraph PT {"
+    , "    subgraph place {"
+    , "        graph [shape=circle,color=gray];"
+    , "        node [shape=circle,fixedsize=true,width=1];"
+    , "        " ++ showSetLab ps
+    , "    }"
+    , "    subgraph transitions {"
+    , "        node [shape=rect,height=0.2,width=1];"
+    , "        " ++ showSetLab tr
+    , "    }"
+    , "    " ++ concatMap (showPreBP bp) (S.toList tr)
+    , "    " ++ concatMap (showPostBP bp) (S.toList tr)
+    , "}"]
+  where tr = S.map (\x -> (x, ht x)) (trans net)
+        ps = S.map (\p -> (p, hp p)) (places net)
+
+showPreBP :: BProc -> (PTTrans, PTTrans) -> String
+showPreBP (Net {pre=pre},(hp,ht)) tr@(t,tl) =
+  F.concatMap (\p -> "\"" ++ showLab (hp p, p) ++ "\" -> \"" ++ showLab tr  ++ "\"; ") (pre t)
+
+showPostBP :: BProc -> (PTTrans, PTTrans) -> String
+showPostBP (Net {post=post},(hp,ht)) tr@(t,tl) =
+  F.concatMap (\x -> "\"" ++ showLab tr ++ "\" -> \"" ++ showLab (x, hp x) ++ "\"; ") (post t)
+
