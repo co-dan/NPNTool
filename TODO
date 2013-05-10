@@ -18,6 +18,18 @@
   - Marking // map // marking
     
 * PROJECT Unfoldings
-** TODO Faster PossibleExtentions procedure
+** WAITING Faster PossibleExtentions procedure
 *** Faster search for conflicts
+*** Pairwise search for concurrency places can be improved
+    We go through a loop that executes (at most) k iterations. We use
+    a variable C, which after i iterations stores the set C(p1) ∪
+    . . . ∪ C(pi) (the initial value of C is the empty set). In the
+    ith iteration we compute C(pi) and check whether it contains any
+    of p1,...,pk. If so, pi is causally related to at least one of
+    p1,...,pk, and we stop. If not, we check whether C ∩C(pi) contains
+    some place having two output events e ∈ C\C(pi) and e′ ∈
+    C(pi)\C. If so, pi is in conflict with at least one of
+    p1,...,pi−1, and we stop. If not, we add C(pi) to C, and continue
+    with the next iteration.
 *** UpdatePotExt
+** TODO Refactor pred* to work on general nets

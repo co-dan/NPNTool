@@ -5,16 +5,35 @@ import qualified Test.HUnit as H
 import NPNTool.PetriNet
 import NPNTool.PTConstr
 import NPNTool.Unfoldings
+import NPNTool.Graphviz
 import qualified Data.Set as Set
 import Control.Monad
+import Data.Monoid
+import Data.Maybe
+import qualified Data.Map as M
 
+---- Maps
+
+(==>) = M.singleton
+lookupM m = fromJust . flip M.lookup m
+
+homP :: [M.Map PTPlace PTPlace] -> (PTPlace -> PTPlace)
+homP = lookupM . mconcat
+
+transify = Trans . ("t"++) . show
+
+homT :: [M.Map Int Int] -> (PTTrans -> PTTrans)
+homT m = transify . lookupM (M.mapKeys transify (mconcat m))
+       
 ---- Tests        
         
 run' :: PTConstrM l a -> (a, PTNet)
 run' = flip run new        
 
-testNet :: PTNet
-((),testNet) = run' $ do
+------ BP1 and NET1
+
+net1 :: PTNet
+((),net1) = run' $ do
   [s1,s2,s3,s4] <- replicateM 4 mkPlace
   [t1,t2,t3] <- replicateM 3 mkTrans
   arc t1 s1
@@ -42,13 +61,34 @@ on1 = toOccurNet . flip runConstr new $ do
   arc (ts !! 2) (ps !! 5)
   return ()
 
+h11 = homP [1 ==> 1, 2 ==> 2, 3 ==> 3, 4 ==> 4, 5 ==> 1, 6 ==> 2]
+h12 = homT [1 ==> 2, 2 ==> 1, 3 ==> 3]
+
 bp1 :: BProc
-bp1 = (on1, undefined)
+bp1 = (on1, (h11, h12))
 
 testOn1 :: H.Assertion
 testOn1 = H.assertBool "no conflicts in on1"
-          ((filter (uncurry (conflict bp1)) $ pairs (Set.toList (places on1)) (Set.toList (places on1)))
+          ((filter (uncurry (conflict bp1)) $
+            pairs (Set.toList (places on1)) (Set.toList (places on1)))
            == [])
+
+testBp1_1 :: H.Assertion
+testBp1_1 = H.assertBool "possible to extend bp1 with t2" $
+            isJust (posTrans bp1 net1 (Trans "t2"))
+
+testBp1_2 :: H.Assertion
+testBp1_2 = H.assertBool "not possible to extend bp1 with t1 or t3" $
+            isNothing (posTrans bp1 net1 (Trans "t1"))
+            && isNothing (posTrans bp1 net1 (Trans "t3"))
+
+bp1Tests :: H.Test
+bp1Tests = H.TestCase $ do
+  testOn1
+  testBp1_1
+  testBp1_2
+          
+--------------------------------------------------
 
 on2 :: OccurNet
 on2 = toOccurNet . flip runConstr new $ do 
@@ -97,7 +137,7 @@ on2Tests = H.TestCase $ do
   testOn2_4
 
 conflictTests :: H.Test
-conflictTests = H.TestList [ H.TestLabel "Testing on1" (H.TestCase testOn1)
+conflictTests = H.TestList [ H.TestLabel "Testing on1" bp1Tests
                            , H.TestLabel "Testing on2" on2Tests ]
   
             
