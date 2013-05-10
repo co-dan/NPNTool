@@ -14,12 +14,16 @@ import qualified Data.Map as M
 
 ---- Maps
 
+(==>) :: k -> a -> M.Map k a
 (==>) = M.singleton
+
+lookupM :: Ord a => M.Map a c -> a -> c
 lookupM m = fromJust . flip M.lookup m
 
 homP :: [M.Map PTPlace PTPlace] -> (PTPlace -> PTPlace)
 homP = lookupM . mconcat
 
+transify :: Int -> Trans
 transify = Trans . ("t"++) . show
 
 homT :: [M.Map Int Int] -> (PTTrans -> PTTrans)
@@ -68,10 +72,9 @@ bp1 :: BProc
 bp1 = (on1, (h11, h12))
 
 testOn1 :: H.Assertion
-testOn1 = H.assertBool "no conflicts in on1"
-          ((filter (uncurry (conflict bp1)) $
-            pairs (Set.toList (places on1)) (Set.toList (places on1)))
-           == [])
+testOn1 = H.assertBool "no conflicts in on1" $
+          not (any (uncurry (conflict bp1))
+               (pairs (Set.toList (places on1)) (Set.toList (places on1))))
 
 testBp1_1 :: H.Assertion
 testBp1_1 = H.assertBool "possible to extend bp1 with t2" $
