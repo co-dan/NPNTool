@@ -24,9 +24,7 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.MultiSet (MultiSet)
 import qualified Data.MultiSet as MSet
-import Data.Maybe (maybe, fromJust)
 import Data.Foldable (foldMap, fold)
-import Data.Monoid
 import Data.List
 import Control.Applicative
 
@@ -68,7 +66,7 @@ cut n c = (initial n `Set.union` postC)
 
 
 cutMark :: Hom -> Cut -> MultiSet PTPlace
-cutMark (h1,_) p = foldMap (MSet.singleton . h1) p
+cutMark (h1,_) = foldMap (MSet.singleton . h1)
 
 
 ---- Orders and relations on nodes of branching processes
@@ -160,13 +158,13 @@ choose k (x:xs) = map (x:) (choose (k-1) xs)
 conformingLabels :: Hom -> [PTPlace] -> [PTPlace] -> Bool
 conformingLabels (h,_) labels cands =
   let c' = map h cands
-  in labels \\ c' == []
-     && c' \\ labels == []
+  in null (labels \\ c')
+     && null (c' \\ labels)
 
 -- | Whether a list of places are concurreny
 pairwiseCo :: BProc -> [PTPlace] -> Bool
 pairwiseCo bp []     = True
-pairwiseCo bp (p:ps) = and (map (concurrent bp p) ps)
+pairwiseCo bp (p:ps) = all (concurrent bp p) ps
                        && pairwiseCo bp ps
 
 -- | Whether two transitions are equal under a homomorphism
@@ -174,7 +172,7 @@ eqHom :: Hom -> PTTrans -> PTTrans -> Bool
 eqHom (_,h) t1 t2 = t1 == h t2
 
 notPresent :: BProc -> PTTrans -> [PTPlace] -> Bool
-notPresent bp@(on,h) t ps = all (not . any (eqHom h t). flip postP on) ps
+notPresent bp@(on,h) t = all (not . any (eqHom h t). flip postP on) 
 
 -- | Whether it is possbile to add a transition to a branching process.
 -- Return `Nothing` if it's not, returns `Just s` otherwise, where `s` 
