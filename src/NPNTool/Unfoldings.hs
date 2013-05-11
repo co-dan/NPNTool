@@ -7,7 +7,7 @@ module NPNTool.Unfoldings (
   -- * Occurence nets and branching processes
   OccurNet, Hom, BProc, toOccurNet, 
   -- * Configurations and cuts
-  Conf, Cut, cut, cutMark,
+  Conf, Cut, cut, cutMark, localConf,
   -- * Orders and relations on nodes of branching processes
   Node, predPred, predR, preds, predTrans, conflict,
   causalPred, concurrent,
@@ -18,7 +18,7 @@ module NPNTool.Unfoldings (
   BPConstrM, runBPConstrM
   ) where
 
-import Prelude hiding (pred)
+import Prelude hiding (pred, all, any)
 import NPNTool.PetriNet
 import NPNTool.PTConstr  
 import qualified Data.Map as M
@@ -26,14 +26,14 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.MultiSet (MultiSet)
 import qualified Data.MultiSet as MSet
-import Data.Foldable (foldMap, fold, forM_)
-import Data.List
+import Data.Foldable (foldMap, fold, forM_, all, any, find)
+import Data.List ((\\), sortBy, nub)
 import Data.Ord (comparing)
 import Control.Applicative
 import Control.Monad (replicateM, replicateM_)
 import Control.Monad.State hiding (forM_)
 import Data.Monoid ((<>), Monoid)
-import Data.Maybe (fromJust, catMaybes)
+import Data.Maybe (fromJust, catMaybes, isJust)
 
 
 ---- Occurence nets and branching processes
@@ -69,16 +69,18 @@ toOccurNet c =  Net { places  = M.keysSet (p c)
 type Conf = Set Event
 type Cut  = Set Condition
 
-cut :: OccurNet -> Conf -> Cut
-cut n c = (initial n `Set.union` postC)
+cut :: BProc -> Conf -> Cut
+cut (n,_) c = (initial n `Set.union` postC)
           Set.\\ preC
   where postC = foldMap (post n) c
         preC = foldMap (pre n) c
 
 
-cutMark :: Hom -> Cut -> MultiSet PTPlace
-cutMark (h1,_) = foldMap (MSet.singleton . h1)
+cutMark :: BProc -> Cut -> MultiSet PTPlace
+cutMark (_,(h1,_)) = foldMap (MSet.singleton . h1)
 
+localConf :: BProc -> Event -> Conf
+localConf bp = preds bp . Set.singleton
 
 ---- Orders and relations on nodes of branching processes
 
@@ -185,7 +187,16 @@ eqHom :: Hom -> PTTrans -> Event -> Bool
 eqHom (_,h) t1 t2 = t1 == h t2
 
 notPresent :: BProc -> PTTrans -> [PTPlace] -> Bool
-notPresent bp@(on,h) t = all (not . any (eqHom h t). flip postP on) 
+notPresent bp@(on,h) t = all (not . any (eqHom h t). flip postP on)
+
+hasCompanion :: BProc -> Event -> Bool
+hasCompanion bp@(on,_) t =
+  any (\t' -> (confSize t' < confSize t) && sameState bp st t') (trans on)
+  where st = cutMark bp . cut bp . localConf bp $ t
+        confSize = Set.size . localConf bp 
+        
+sameState :: BProc -> MultiSet PTPlace -> Event -> Bool
+sameState bp st e = st == cutMark bp (cut bp (localConf bp e))
 
 -- | Whether it is possbile to add a transition to a branching process.
 -- Return `Nothing` if it's not, returns `Just s` otherwise, where `s` 
@@ -233,15 +244,19 @@ homT t1 t2 = do
   tell (M.empty, M.singleton t1 t2)
   lift (label t1 t2)
 
-posExt :: BProc -> PTNet -> EventQueue
-posExt bp n = catMaybes $
-              map (\t -> (t,) <$> posTrans bp n t) $
-              Set.toList (trans n)
+posExt :: BProc -> PTNet -> Set Event -> EventQueue
+posExt bp n cutoff = filter (predTerminal . snd) $
+                     catMaybes $
+                     map (\t -> (t,) <$> posTrans bp n t) $
+                     Set.toList (trans n)
+  where predTerminal cs = Set.null $
+                          fold (Set.map (pred (fst bp)) cs)
+                          `Set.intersection` cutoff
               
 -- | One step of unfolding
-unfStep :: PTNet -> EventQueue -> BPConstrM EventQueue
-unfStep _ [] = return []
-unfStep n ((tl,preT):qs) = do
+unfStep :: PTNet -> Set Event -> EventQueue -> BPConstrM (Set Event, EventQueue)
+unfStep _ cutoff [] = return (cutoff, [])
+unfStep n cutoff ((tl,preT):qs) = do
   t <- lift mkTrans
   homT t tl
   forM_ preT $ \p -> do
@@ -251,16 +266,21 @@ unfStep n ((tl,preT):qs) = do
     homP p' p
     lift $ arc t p'
   bp <- getBP
+  let cutoff' = if hasCompanion bp t
+                then t `Set.insert` cutoff
+                else cutoff
   let qs' = sortBy (comparing (localConfSize bp)) $
-            nub (posExt bp n ++ qs)
-  return $ qs'
+            nub (posExt bp n cutoff' ++ qs)
+  return (cutoff', qs')
 
 
 -- | For debugging purposes
-unfSteps :: Int -> PTNet -> EventQueue -> BPConstrM ()
-unfSteps 0 _ _ = return ()
-unfSteps k n q = step >>= unfSteps (k-1) n
-  where step = unfStep n q
+unfSteps :: Int -> PTNet -> Set Event -> EventQueue -> BPConstrM ()
+unfSteps 0 _ _ _ = return ()
+unfSteps k n cutoff q = do
+  let step = unfStep n cutoff q
+  (cutoff', q') <- step
+  unfSteps (k-1) n cutoff' q'
         
 unfInitial :: PTNet -> BPConstrM EventQueue
 unfInitial n = do
@@ -268,12 +288,12 @@ unfInitial n = do
     p' <- lift mkPlace
     homP p' p
   bp <- getBP
-  return $ posExt bp n
+  return $ posExt bp n Set.empty
 
 unfolding :: Int -> PTNet -> BPConstrM ()
 unfolding k n = do
   q <- unfInitial n
-  unfSteps k n q
+  unfSteps k n Set.empty q
 
 localConfSize :: BProc -> (PTTrans, Set Condition) -> Int
 localConfSize bp = Set.size . preds bp . snd
