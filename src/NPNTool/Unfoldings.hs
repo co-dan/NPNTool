@@ -1,6 +1,7 @@
 {-# LANGUAGE TypeFamilies, TypeSynonymInstances #-}
 {-# LANGUAGE TupleSections, FlexibleContexts #-}
 {-# LANGUAGE MultiParamTypeClasses, FlexibleInstances #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 -- | Petri net unfoldings
 module NPNTool.Unfoldings (
   -- * Occurence nets and branching processes
@@ -11,9 +12,10 @@ module NPNTool.Unfoldings (
   Node, predPred, predR, preds, predTrans, conflict,
   causalPred, concurrent,
   -- * Unfoldings and prefixes
-  posTrans,
+  posTrans, posExt, unfStep, unfSteps, unfolding,
   -- * Auxiliary functions 
-  pairs, fixedPoint, choose
+  pairs, fixedPoint, choose,
+  BPConstrM, runBPConstrM
   ) where
 
 import Prelude hiding (pred)
@@ -24,16 +26,25 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.MultiSet (MultiSet)
 import qualified Data.MultiSet as MSet
-import Data.Foldable (foldMap, fold)
+import Data.Foldable (foldMap, fold, forM_)
 import Data.List
+import Data.Ord (comparing)
 import Control.Applicative
+import Control.Monad (replicateM, replicateM_)
+import Control.Monad.State hiding (forM_)
+import Data.Monoid ((<>), Monoid)
+import Data.Maybe (fromJust, catMaybes)
+
 
 ---- Occurence nets and branching processes
 
--- | Occurence net
-type OccurNet = Net PTPlace PTTrans Set Set
+type Event = PTTrans
+type Condition = PTPlace
+
+-- | Occurrence net
+type OccurNet = Net Condition Event Set Set
 -- | Homomorphism from P/T-net to occurence net                
-type Hom = (PTPlace -> PTPlace, PTTrans -> PTTrans)
+type Hom = (Condition -> PTPlace, Event -> PTTrans)
 -- | Branching process
 type BProc = (OccurNet, Hom)
 
@@ -55,8 +66,8 @@ toOccurNet c =  Net { places  = M.keysSet (p c)
         
 -- | A configuration of the branching process        
 -- is a set of causally closed and conflict-free events
-type Conf = Set PTTrans
-type Cut  = Set PTPlace
+type Conf = Set Event
+type Cut  = Set Condition
 
 cut :: OccurNet -> Conf -> Cut
 cut n c = (initial n `Set.union` postC)
@@ -75,11 +86,11 @@ class Node n m where
   type CoNode n 
   pred :: m -> n -> Set (CoNode n)
 
-instance Node PTPlace OccurNet where
+instance Node Condition OccurNet where
   type CoNode PTPlace = PTTrans
   pred on p = Set.fromList $ preP p on
 
-instance Node PTTrans OccurNet where
+instance Node Event OccurNet where
   type CoNode PTTrans = PTPlace
   pred = pre
 
@@ -115,14 +126,16 @@ fixedPoint f x = let it = iterate f x
                  in fst $ head $ dropWhile (uncurry (/=)) $ it `zip` (tail it)
 
 -- | Transitive closure of the predecessor relationship
-preds :: BProc -> Set PTPlace -> Set PTPlace
+preds :: (Ord n, Node n OccurNet, Node (CoNode n) OccurNet, 
+             n ~ CoNode (CoNode n)) 
+         => BProc -> Set n -> Set n
 preds bp = fixedPoint (predMany bp)         
 
-predTrans :: BProc -> PTPlace -> Set PTTrans
+predTrans :: BProc -> Condition -> Set Event
 predTrans bp@(on,_) = fixedPoint (predMany bp) . pred on
 
 -- | Whether two places are in conflict
-conflict :: BProc -> PTPlace -> PTPlace -> Bool
+conflict :: BProc -> Condition -> Condition -> Bool
 conflict bp@(on,_) p1 p2 = any intersectingPred $ filter (uncurry (/=)) pastTrans
   where intersectingPred :: (PTTrans,PTTrans) -> Bool
         intersectingPred (a,b) = not . Set.null
@@ -155,7 +168,7 @@ choose k []     = []
 choose k (x:xs) = map (x:) (choose (k-1) xs)
                   ++ choose k xs
 
-conformingLabels :: Hom -> [PTPlace] -> [PTPlace] -> Bool
+conformingLabels :: Hom -> [PTPlace] -> [Condition] -> Bool
 conformingLabels (h,_) labels cands =
   let c' = map h cands
   in null (labels \\ c')
@@ -168,7 +181,7 @@ pairwiseCo bp (p:ps) = all (concurrent bp p) ps
                        && pairwiseCo bp ps
 
 -- | Whether two transitions are equal under a homomorphism
-eqHom :: Hom -> PTTrans -> PTTrans -> Bool
+eqHom :: Hom -> PTTrans -> Event -> Bool
 eqHom (_,h) t1 t2 = t1 == h t2
 
 notPresent :: BProc -> PTTrans -> [PTPlace] -> Bool
@@ -177,11 +190,91 @@ notPresent bp@(on,h) t = all (not . any (eqHom h t). flip postP on)
 -- | Whether it is possbile to add a transition to a branching process.
 -- Return `Nothing` if it's not, returns `Just s` otherwise, where `s` 
 -- is a pre-set of the transition which should be added.
-posTrans :: BProc -> PTNet -> PTTrans -> Maybe (Set PTPlace)
+posTrans :: BProc -> PTNet -> PTTrans -> Maybe (Set Condition)
 posTrans bp@(on, h) ptn t = Set.fromList <$> find (pairwiseCo bp) candidates
   where candidates = filter (notPresent bp t) $
                      filter (conformingLabels h (Set.toList labels)) $
                      choose k (Set.toList (places on))
         labels = pred ptn t
         k = Set.size labels
+
+
+type HomS = (M.Map Condition PTPlace, M.Map Event PTTrans)
+type BPConstrM = StateT HomS (PTConstrM PTTrans)
+type EventQueue = [(PTTrans, Set Condition)]
+
+-- runBPConstrM :: BPConstrM a -> (a, BProc)
+runBPConstrM c =
+  let ((a,homs), s') = runState (runStateT c (M.empty, M.empty)) new
+      hom = toHom homs
+      on = toOccurNet s'
+  in (a, (on,hom))
+  
+tell :: (MonadState s m, Monoid s) => s -> m ()
+tell x = modify (<> x)
+
+toHom :: HomS -> Hom
+toHom (m1,m2) =(fromJust . flip M.lookup m1,
+                fromJust . flip M.lookup m2)
+         
+getBP :: BPConstrM BProc
+getBP = do
+  on <- lift get
+  homS <- get
+  return (toOccurNet on, toHom homS)
+
+-- | Adds a place to the homomorphism
+homP :: Condition -> PTPlace -> BPConstrM ()
+homP p s = tell (M.singleton p s, M.empty)
+
+-- | Adds an event to the homomorphism
+homT :: Event -> PTTrans -> BPConstrM ()
+homT t1 t2 = do
+  tell (M.empty, M.singleton t1 t2)
+  lift (label t1 t2)
+
+posExt :: BProc -> PTNet -> EventQueue
+posExt bp n = catMaybes $
+              map (\t -> (t,) <$> posTrans bp n t) $
+              Set.toList (trans n)
+              
+-- | One step of unfolding
+unfStep :: PTNet -> EventQueue -> BPConstrM EventQueue
+unfStep _ [] = return []
+unfStep n ((tl,preT):qs) = do
+  t <- lift mkTrans
+  homT t tl
+  forM_ preT $ \p -> do
+    lift $ arc p t
+  forM_ (post n tl) $ \p -> do
+    p' <- lift mkPlace
+    homP p' p
+    lift $ arc t p'
+  bp <- getBP
+  let qs' = sortBy (comparing (localConfSize bp)) $
+            nub (posExt bp n ++ qs)
+  return $ qs'
+
+
+-- | For debugging purposes
+unfSteps :: Int -> PTNet -> EventQueue -> BPConstrM ()
+unfSteps 0 _ _ = return ()
+unfSteps k n q = step >>= unfSteps (k-1) n
+  where step = unfStep n q
+        
+unfInitial :: PTNet -> BPConstrM EventQueue
+unfInitial n = do
+  forM_ (initial n) $ \p -> do
+    p' <- lift mkPlace
+    homP p' p
+  bp <- getBP
+  return $ posExt bp n
+
+unfolding :: Int -> PTNet -> BPConstrM ()
+unfolding k n = do
+  q <- unfInitial n
+  unfSteps k n q
+
+localConfSize :: BProc -> (PTTrans, Set Condition) -> Int
+localConfSize bp = Set.size . preds bp . snd
 
