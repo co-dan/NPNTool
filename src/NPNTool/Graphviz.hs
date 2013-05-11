@@ -94,7 +94,7 @@ drawBP bp@(net,(hp,ht)) = unlines
 
 showPreBP :: BProc -> (PTTrans, PTTrans) -> String
 showPreBP (Net {pre=pre},(hp,ht)) tr@(t,tl) =
-  F.concatMap (\p -> "\"" ++ showLab (hp p, p) ++ "\" -> \"" ++ showLab tr  ++ "\"; ") (pre t)
+  F.concatMap (\p -> "\"" ++ showLab (p, hp p) ++ "\" -> \"" ++ showLab tr  ++ "\"; ") (pre t)
 
 showPostBP :: BProc -> (PTTrans, PTTrans) -> String
 showPostBP (Net {post=post},(hp,ht)) tr@(t,tl) =

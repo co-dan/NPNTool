@@ -49,6 +49,9 @@ net1 :: PTNet
   arc t2 s4
   arc s4 t3
   arc t3 s2
+
+  mark s1
+  mark s2
   return ()
 
 on1 :: OccurNet
@@ -64,6 +67,7 @@ on1 = toOccurNet . flip runConstr new $ do
   arc (ts !! 1) (ps !! 4)
   arc (ts !! 2) (ps !! 5)
   return ()
+
 
 h11 = homP [1 ==> 1, 2 ==> 2, 3 ==> 3, 4 ==> 4, 5 ==> 1, 6 ==> 2]
 h12 = homT [1 ==> 2, 2 ==> 1, 3 ==> 3]
@@ -92,6 +96,32 @@ bp1Tests = H.TestCase $ do
   testBp1_2
           
 --------------------------------------------------
+
+net2 :: PTNet
+((),net2) = run' $ do
+  [p1,p2,p3,p4,p5,p6] <- replicateM 6 mkPlace
+  [t1,t2,t3,t4,t5,t6] <- replicateM 6 mkTrans
+  arc p1 t1
+  arc t1 p3
+  arc p2 t2
+  arc p2 t3
+  arc t2 p4
+  arc t3 p5
+  
+  arc p3 t4
+  arc p3 t5
+  arc p4 t4
+  arc p5 t5
+  arc t4 p6
+  arc t5 p6
+
+  arc p6 t6
+  arc t6 p1
+  arc t6 p2
+
+  mark p1
+  mark p2
+  return ()
 
 on2 :: OccurNet
 on2 = toOccurNet . flip runConstr new $ do 
