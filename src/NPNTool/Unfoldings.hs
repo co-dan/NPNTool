@@ -5,14 +5,14 @@
 -- | Petri net unfoldings
 module NPNTool.Unfoldings (
   -- * Occurence nets and branching processes
-  OccurNet, Hom, BProc, toOccurNet, 
+  Event, Condition, OccurNet, Hom, BProc, toOccurNet,  
   -- * Configurations and cuts
   Conf, Cut, cut, cutMark, localConf,
   -- * Orders and relations on nodes of branching processes
-  Node, predPred, predR, preds, predTrans, conflict,
+  Node, CoNode, predPred, predR, preds, predTrans, conflict,
   causalPred, concurrent,
   -- * Unfoldings and prefixes
-  posTrans, posExt, unfStep, unfSteps, unfolding,
+  EventQueue, posTrans, posExt, unfolding,
   -- * Auxiliary functions 
   pairs, fixedPoint, choose,
   BPConstrM, runBPConstrM
@@ -121,8 +121,8 @@ predMany :: (Ord n, Node n OccurNet, Node (CoNode n) OccurNet,
          => BProc -> Set n -> Set n
 predMany bp = fold . Set.map (predR bp)
 
--- | General fixed point funciton
--- the @fix@ from @Data.Function@ only compute Kleene fixed-points
+-- | General fixed point funciton since 
+-- the @fix@ from "Data.Function" only compute Kleene fixed-points
 fixedPoint :: Eq a => (a -> a) -> a -> a
 fixedPoint f x = let it = iterate f x
                  in fst $ head $ dropWhile (uncurry (/=)) $ it `zip` (tail it)
@@ -145,11 +145,11 @@ conflict bp@(on,_) p1 p2 = any intersectingPred $ filter (uncurry (/=)) pastTran
         pastTrans = pairs (Set.toList (predTrans bp p1)) (Set.toList (predTrans bp p2))
 
 -- | Whether one place is a causal predecessor of another
-causalPred :: BProc -> PTPlace -> PTPlace -> Bool
+causalPred :: BProc -> Condition -> Condition -> Bool
 causalPred bp p1 p2 = p1 `Set.member` (preds bp (Set.singleton p2))
 
 -- | Whether two places are concurrent                      
-concurrent :: BProc -> PTPlace -> PTPlace -> Bool
+concurrent :: BProc -> Condition -> Condition -> Bool
 concurrent bp p1 p2 = not $ and
                       [ causalPred bp p1 p2
                       , causalPred bp p2 p1
@@ -163,7 +163,7 @@ pairs (x:xs) ys = map (x,) ys ++ pairs xs ys
         
 ---- Unfoldings, prefixes
 
--- | All the ways to choose `k` elements from a list                  
+-- | All the possible ways to choose @k@ elements from a list                  
 choose :: Int -> [a] -> [[a]]
 choose 0 _      = [[]]
 choose k []     = []
@@ -199,7 +199,7 @@ sameState :: BProc -> MultiSet PTPlace -> Event -> Bool
 sameState bp st e = st == cutMark bp (cut bp (localConf bp e))
 
 -- | Whether it is possbile to add a transition to a branching process.
--- Return `Nothing` if it's not, returns `Just s` otherwise, where `s` 
+-- Return @Nothing@ if it's not, returns @Just s@ otherwise, where @s@
 -- is a pre-set of the transition which should be added.
 posTrans :: BProc -> PTNet -> PTTrans -> Maybe (Set Condition)
 posTrans bp@(on, h) ptn t = Set.fromList <$> find (pairwiseCo bp) candidates
@@ -214,7 +214,7 @@ type HomS = (M.Map Condition PTPlace, M.Map Event PTTrans)
 type BPConstrM = StateT HomS (PTConstrM PTTrans)
 type EventQueue = [(PTTrans, Set Condition)]
 
--- runBPConstrM :: BPConstrM a -> (a, BProc)
+runBPConstrM :: BPConstrM a -> (a, BProc)
 runBPConstrM c =
   let ((a,homs), s') = runState (runStateT c (M.empty, M.empty)) new
       hom = toHom homs
@@ -282,6 +282,7 @@ unfSteps k n cutoff q = do
   (cutoff', q') <- step
   unfSteps (k-1) n cutoff' q'
         
+-- | Initial step for the unfolding algorithm
 unfInitial :: PTNet -> BPConstrM EventQueue
 unfInitial n = do
   forM_ (initial n) $ \p -> do
@@ -290,6 +291,7 @@ unfInitial n = do
   bp <- getBP
   return $ posExt bp n Set.empty
 
+-- | Run the unfolding algorithm for `k` steps or until it stops
 unfolding :: Int -> PTNet -> BPConstrM ()
 unfolding k n = do
   q <- unfInitial n
