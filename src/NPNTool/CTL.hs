@@ -4,7 +4,7 @@ module NPNTool.CTL (
   -- * CTL
   CTL(..),
   -- ** Additional operators
-  ef,af,eg,ag,
+  ef,af,eg,ag, (==>),
   -- * Verification
   verifyPT,
   -- * Helper functions
@@ -59,6 +59,8 @@ af = AU CTLTrue
 eg f = CTLNot $ af (CTLNot f)
 ag f = CTLNot $ ef (CTLNot f)             
 
+(==>) :: CTL -> CTL -> CTL
+a ==> b = CTLOr (CTLNot a) b
 
 -- | The usual liftM2 f won't work here, we need a left-biased version
 orElse, andThen :: Monad m => m Bool -> m Bool -> m Bool
