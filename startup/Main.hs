@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 module Main (main) where
 
 import Data.Set (Set)
@@ -5,42 +6,49 @@ import qualified Data.Set as Set
 import Data.MultiSet (MultiSet)
 import qualified Data.MultiSet as MSet
 import NPNTool.CTL
+import NPNTool.Bisimilarity
+import NPNTool.Liveness
+import NPNTool.AlphaTrail
 import NPNTool.PetriNet
-
-atom :: [Int] -> CTL
-atom a = CTLAtom (show (MSet.fromList a), (==MSet.fromList a))
-
-formula :: CTL
-formula = ef (CTLOr (atom [2,2,3,4]) (atom [3,3,4,4]))
-
-main = do
-  print $ verifyPT pn1 formula
-  print $ verifyPT pn2 formula
-
-pn1 :: PTNet
-pn1 = Net { places = Set.fromList [1,2,3,4]
-          , trans  = Set.fromList [t1,t2]
-          , pre    = \(Trans x) -> case x of
-               "t1" -> MSet.fromList [1,2]
-               "t2"  -> MSet.fromList [1]
-          , post   = \(Trans x) -> case x of
-               "t1" -> MSet.fromList [3,4]
-               "t2"  -> MSet.fromList [2]
-          , initial = MSet.fromList [1,1,2,2]
-          } 
-  where t1 = Trans "t1"
-        t2 = Trans "t2"
+import NPNTool.Graphviz
+import qualified Data.Map as M
+import qualified Data.IntMap as IM
+import NPNTool.XMLReader
+import NPNTool.NPNet
+import Control.Monad
+import Data.Maybe
+import Control.Monad.Trans
+import Control.Monad.Trans.Maybe
+import System.Environment
   
-pn2 :: PTNet         
-pn2 = Net { places = Set.fromList [1,2]
-          , trans  = Set.fromList [t1,t2]
-          , pre    = \(Trans x) -> case x of
-               "t1" -> MSet.fromList [1]
-               "t2" -> MSet.fromList [2]
-          , post   = \(Trans x) -> case x of
-               "t1" -> MSet.fromList [2]
-               "t2" -> MSet.fromList [1]
-          , initial = MSet.fromList [1]
-          } 
-  where t1 = Trans "t1"
-        t2 = Trans "t2"
+main :: IO ()
+main = do
+  args <- getArgs
+  progName <- getProgName
+  if (length args /= 1)
+    then putStrLn $ "Usage: " ++ progName ++ " <xml-file>"
+    else do
+         result <- runMaybeT $ test (head args)
+         print (isJust result)
+
+
+testLive :: (Ord (m1 p), Ord p, Ord t, DynNet (Net p t n m1) p t m1) => Net p t n m1 -> MaybeT IO ()
+testLive n = unless (isLive (reachabilityGraph n) n) $ do
+  lift (putStrLn "One of the nets is not live")
+  mzero
+             
+
+test :: FilePath -> MaybeT IO ()
+test fp = do
+  npn <- lift $ runConstr fp
+  testLive (net npn)
+  forM_ (M.toList $ unMark (initial (net npn))) $ \(p,m) -> do
+    forM_ m $ \x -> do
+      case x of
+        Left _ -> return ()
+        Right (ElemNetId id) -> do
+          let (en,enLab,enMark) = (elementNets npn) IM.! id
+          testLive (en { initial = enMark })
+          when (isNothing (isMBisim (alphaTrail npn p) (en,enLab))) $ do
+            lift . putStrLn $ "Net " ++ show id ++ " is not m-bisimilar to its alpha-trail net"
+            mzero
