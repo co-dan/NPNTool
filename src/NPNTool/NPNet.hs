@@ -52,7 +52,7 @@ instance Ord v => DynNet (SNet l v Int) PTPlace Trans (NPMark l Int) where
   fire sn m = tokensToMark . fire (toPNet sn) (markTokens m)
 
 
-toPNet :: SNet l v Int -> PTNet
+toPNet :: Ord v => SNet l v Int -> PTNet
 toPNet sn = Net { places  = places sn
                 , trans   = trans sn
                 , pre     = toTokens . (pre sn)
@@ -83,7 +83,7 @@ exprToTokens e = toTokens e 0
         toTokens (Const _) = (+1)
         toTokens (Plus e1 e2) = toTokens e1 . toTokens e2
 
-toTokens :: SArc v c PTPlace -> MultiSet PTPlace
+toTokens :: (Ord c, Ord v) => SArc v c PTPlace -> MultiSet PTPlace
 toTokens = MSet.fromOccurList . Set.toList .
            Set.map (\(e,pl) -> (pl, exprToTokens e)) . unSArc 
 

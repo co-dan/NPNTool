@@ -6,6 +6,7 @@ import System.Exit (exitFailure)
 
 import NPNTool.PetriNet
 import NPNTool.PTConstr
+import NPNTool.CTL
 import NPNTool.NPNConstr (arcExpr, liftPTC, liftElemNet, addElemNet, NPNConstrM)
 import qualified NPNTool.NPNConstr as NPC
 import NPNTool.Graphviz
@@ -27,7 +28,11 @@ import Data.Maybe (isJust,isNothing)
 import Data.Monoid
 import qualified Data.Foldable as F
 
-import Unfoldings hiding (run')
+import Unfoldings hiding (run', (==>))
+
+
+atom :: [Int] -> CTL
+atom a = CTLAtom (show (MSet.fromList a), (==MSet.fromList a))
 
 
 pn1 :: PTNet
@@ -44,6 +49,12 @@ pn1 = Net { places = Set.fromList [1,2,3,4]
   where t1 = Trans "t1"
         t2 = Trans "t2"
   
+formula1 :: CTL
+formula1 = ef (CTLOr (atom [2,2,3,4]) (atom [3,3,4,4]))         
+
+ctltest1 :: H.Test
+ctltest1 = H.TestCase $ H.assertBool "formula1 should hold for pn1" (fst $ verifyPT pn1 formula1) 
+
 pn2 :: PTNet         
 pn2 = Net { places = Set.fromList [1,2]
           , trans  = Set.fromList [t1,t2]
@@ -58,7 +69,13 @@ pn2 = Net { places = Set.fromList [1,2]
   where t1 = Trans "t1"
         t2 = Trans "t2"
 
-        
+formula2 :: CTL
+formula2 = CTLNot (ef (atom [1,2]))
+
+ctltest2 :: H.Test
+ctltest2 = H.TestCase $ H.assertBool "formula2 should hold for pn1" (fst $ verifyPT pn2 formula2) 
+
+
 run' :: PTConstrM l a -> (a, PTNet)
 run' = flip run new        
 
@@ -135,7 +152,7 @@ sn2' = Net { places = Set.fromList [1,2,3,4,5,6]
 --   { ptnet = pnQ { initial = MSet.fromList [1] }
 --   , actions = greeter . read . name
 --   }
-
+--
 -- data Command = AskQ | Greet | Exit  
 --              deriving Read
 -- greeter :: Command -> IO ()  
@@ -246,6 +263,13 @@ pn7 = pn7' { initial = MSet.fromList [1] }
   arc p1 t
   arc t p3
   return ()
+
+formula3 :: CTL
+formula3 = ag $ (atom [2]) ==> (ef (atom [3]))
+
+ctltest3 :: H.Test
+ctltest3 = H.TestCase $ H.assertBool "formula3 should hold for pn7" (fst $ verifyPT pn7 formula3) 
+
 
 pn8 = pn8' { initial = MSet.fromList [1] }  
 
@@ -394,9 +418,12 @@ livenessTests = H.TestList
                   (H.TestCase p2pLive)]
 
 dynTests = H.TestList [ H.TestLabel "DynNet test 1" (H.TestCase dynTest1) ]
+ctlTests = H.TestList [ H.TestLabel "CTL test 1" ctltest1 
+                      , H.TestLabel "CTL test 2" ctltest2
+                      , H.TestLabel "CTL test 3" ctltest3 ]
 
 main = do
-  c <- H.runTestTT $ H.TestList [mBisimTests, livenessTests, dynTests, conflictTests]
+  c <- H.runTestTT $ H.TestList [mBisimTests, livenessTests, dynTests, ctlTests, conflictTests]
   when (H.errors c > 0 || H.failures c > 0) exitFailure
 
 
