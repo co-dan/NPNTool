@@ -10,8 +10,6 @@ import NPNTool.PTConstr (PTConstrM)
 import qualified NPNTool.PTConstr as PTC
 import Control.Monad
 
-import Control.Monad.Writer
-
 import qualified Data.IntMap as IM
   
 type Label = Int
@@ -112,12 +110,14 @@ elemMarking = hasName "marking"
                hasName "map" >>> proc m -> do
                  place <- getAttrValue "place" -< m
                  weight <- getAttrValue "weight" <<< deep (hasName "weight") -< m
-                 traceValue 1 show -< weight
+                 -- traceValue 1 show -< weight
                  returnA -< replicateM_ (read weight) (PTC.mark (idToPlace place)))
           >. sequence_
 
 elemToken :: IOSArrow XmlTree Int
-elemToken = arr read <<< traceValue 1 id <<< getAttrValue "id" <<< hasName "tokenNets" 
+elemToken = arr read <<<
+            -- traceValue 1 id <<<
+            getAttrValue "id" <<< hasName "tokenNets" 
 
 elemNetPTC :: IOSArrow XmlTree (PTConstrM Label ())
 elemNetPTC = hasName "net" 
@@ -141,11 +141,11 @@ getNetConstr doc = runX $ configSysVars [withTrace 1]
                    >>> readDocument [] doc
                    -- >>> listA (deep elemNet)
                    -- >>> arr sequence_
-                   >>> deep elemNet <+> deep sysNet <+> deep sysNetMarking
+                   >>> (deep elemNet <+> deep sysNet <+> deep sysNetMarking)
 
 runConstr :: FilePath -> IO (NPNet Label Variable Int)
 runConstr doc = do
   constr <- getNetConstr doc
   let (_,sn) = run (sequence constr) new
---  return . snd $ PTC.run (sequence constr) PTC.new
   return sn
+

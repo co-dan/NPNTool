@@ -9,6 +9,7 @@
 * NPConstr
   - toSArc function: change to make use of possible monoidal structure of SArc?
 * XMLReader
+  - parser error handling
   - Power у monoms
   - Добавить тестов 
   - Различать tokenAtomic и сетевые токены
@@ -16,7 +17,6 @@
   - Instances у typeAtomic
   - Variables в элементных сетях 
   - Marking // map // marking
-    
 * PROJECT Unfoldings
 ** WAITING Faster PossibleExtentions procedure
 *** Faster search for conflicts

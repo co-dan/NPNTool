@@ -33,14 +33,14 @@ Library
   other-modules:       NPNTool.NCTL,
                        NPNTool.ModelChecker
                        
-  build-depends:       base ==4.5.*,
-                       fgl ==5.4.2.*,
-                       mtl ==2.1.*,
-                       transformers ==0.3.*,
+  build-depends:       base >=4.5.0,
+                       fgl >=5.4.2.0,
+                       mtl >=2.1.0,
+                       transformers >=0.3,
                        containers >=0.5,
                        multiset ==0.2.2,
-                       text ==0.11.*,
-                       hxt ==9.3.*,
+                       text >=0.11.0,
+                       hxt >=9.3.0,
                        HUnit,
                        random ==1.0.*
                        
@@ -48,16 +48,18 @@ Library
 executable nctlmodelchecker
   main-is:             Main.hs
   hs-source-dirs:      startup/
-  build-depends:       base ==4.5.*,
+  build-depends:       base >=4.5.0,
                        multiset ==0.2.2,    
-                       containers >=0.5, 
+                       containers >=0.5,
+                       transformers >=0.3,
+                       mtl ==2.1.*,
                        nctlmodelchecker
 
 Test-Suite general-tests
   type:                exitcode-stdio-1.0
   hs-source-dirs:      tests/
   main-is:             Main.hs
-  build-depends:       base ==4.5.*,
+  build-depends:       base >=4.5.0,
                        multiset ==0.2.2,    
                        containers >=0.5,
                        nctlmodelchecker,
