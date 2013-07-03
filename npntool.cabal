@@ -49,7 +49,7 @@ executable npnlive
                        containers >=0.5,
                        transformers >=0.3,
                        mtl ==2.1.*,
-                       nctlmodelchecker
+                       npntool
 
 Test-Suite general-tests
   type:                exitcode-stdio-1.0
@@ -58,7 +58,7 @@ Test-Suite general-tests
   build-depends:       base >=4.5.0,
                        multiset ==0.2.2,    
                        containers >=0.5,
-                       nctlmodelchecker,
+                       npntool,
                        mtl,
                        HUnit ==1.2.5.*
 
