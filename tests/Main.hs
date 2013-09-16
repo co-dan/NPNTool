@@ -7,7 +7,7 @@ import System.Exit (exitFailure)
 import NPNTool.PetriNet
 import NPNTool.PTConstr
 import NPNTool.CTL
-import NPNTool.NPNConstr (arcExpr, liftPTC, liftElemNet, addElemNet, NPNConstrM)
+import NPNTool.NPNConstr (arcExpr, liftPTC, liftElemNet, liftElemNet_, addElemNet, NPNConstrM)
 import qualified NPNTool.NPNConstr as NPC
 import NPNTool.Graphviz
 import NPNTool.Bisimilarity
@@ -417,7 +417,12 @@ livenessTests = H.TestList
                 , H.TestLabel "Liveness test for P2P example 1"
                   (H.TestCase p2pLive)]
 
-dynTests = H.TestList [ H.TestLabel "DynNet test 1" (H.TestCase dynTest1) ]
+dynTests = H.TestList [ H.TestLabel "DynNet test 1" (H.TestCase dynTest1)
+                      , H.TestLabel "DynNet test 1 for simplNPN"
+                            (H.TestCase dynTestNPN1)
+                      , H.TestLabel "DynNet test 2 for simplNPN"
+                            (H.TestCase dynTestNPN2)
+                      ]
 ctlTests = H.TestList [ H.TestLabel "CTL test 1" ctltest1 
                       , H.TestLabel "CTL test 2" ctltest2
                       , H.TestLabel "CTL test 3" ctltest3 ]
@@ -544,6 +549,53 @@ snP2P = snd . flip NPC.run NPC.new $ do
   NPC.mark initPipe (Right pipe1)
   NPC.marks initPeer (map Right [peer1,peer2,peer3,peer4])
 
+simplENid :: ElemNetId
+t2, t3, k :: PTTrans
+simplNPN  :: NPNet () String Int
+((k,t2,t3,simplENid), simplNPN) = flip NPC.run NPC.new $ do
+    (k, en1) <- liftElemNet_ simplEN
+    [p1,p2,p3] <- replicateM 3 NPC.mkPlace
+    [t1,t2,t3] <- replicateM 3 NPC.mkTrans
+    let x = Var "x"
+    arcExpr p1 x t1
+    arcExpr p1 x t2
+    arcExpr t1 x p2
+    arcExpr t2 x p3
+    NPC.label t1 ()
+    NPC.mark  p1 (Right en1)
+
+    arcExpr p2 x t3
+    arcExpr t3 x p3
+    return (k,t2,t3,en1)
+
+simplEN :: PTConstrM () PTTrans
+simplEN = do
+    [s1,s2,s3] <- replicateM 3 mkPlace
+    [k1,k2]    <- replicateM 2 mkTrans
+    arc s1 k1
+    arc k1 s2
+    arc s2 k2
+    arc k2 s3
+    mark s1
+    label k1 ()
+    label k2 ()
+    return k2
+
+bind1       :: Binding String Int
+bind1    "x" = Right simplENid
+bind1     _  = Left  0
+
+dynTestNPN1 :: H.Assertion
+dynTestNPN1 = H.assertBool "t2 should be enabled in simpl under bind1"
+              (enabled simplNPN (initial (net simplNPN)) (t2, bind1))
+
+dynTestNPN2 :: H.Assertion
+dynTestNPN2 = H.assertBool "k2 (from elem net) should *NOT* be enabled in simpl under bind1"
+              (not (enabled simplNPN (initial (net simplNPN)) (k, bind1)))
+
+dynTestNPN3 :: H.Assertion
+dynTestNPN3 = H.assertBool "t3 should *NOT* be enabled in simpl under bind1"
+              (not (enabled simplNPN (initial (net simplNPN)) (t3, bind1)))
 dynTest1 :: H.Assertion
 dynTest1 = H.assertBool "t1 should be enabled in snP2P"
            (enabled (net snP2P) (initial (net snP2P)) (Trans "t1"))

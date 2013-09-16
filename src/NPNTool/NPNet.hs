@@ -1,7 +1,8 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving,
-FlexibleInstances, MultiParamTypeClasses #-}
+FlexibleInstances, MultiParamTypeClasses,
+RecordWildCards, ScopedTypeVariables #-}
 module NPNTool.NPNet (
-  Expr(..), vars, SArc(..),
+  Expr(..), vars, SArc(..), Binding,
   Labelling, NPNet(..), SNet, ElemNet, ElemNetId(..),
   NPMark(..),
   exprMult
@@ -13,10 +14,12 @@ import qualified Data.Set as Set
 import Data.MultiSet (MultiSet)
 import qualified Data.MultiSet as MSet
 import qualified Data.Foldable as F
+import Data.Maybe (fromJust, fromMaybe)
 import Data.Monoid
 import Data.Map (Map)
 import qualified Data.Map as M
 import Data.IntMap (IntMap)
+import qualified Data.IntMap as IM
 import Data.Tuple (swap)
 
 -- | Arc expressions for higher level nets
@@ -109,4 +112,30 @@ data NPNet lab var con = NPNet
      , labels :: Set lab
      }  
 
+-- | To which net the transition belongs?
+whichNet :: NPNet lab var con -> PTTrans -> Either (SNet lab var con) (ElemNet lab)
+whichNet NPNet{..} t = 
+    if t `Set.member` trans net
+    then Left net
+    else Right $ fromJust $ F.find inElNet elementNets
+  where inElNet (en,_,_) = t `Set.member` trans en
 
+type Binding var con = var -> Either con ElemNetId
+
+--- XXX: not finished yet.
+--- TODO: labels, enabledS
+instance (Show var) => DynNet (NPNet lab var Int) PTPlace (PTTrans, Binding var Int) (NPMark lab Int) where
+    enabledS = undefined
+    enabled npnet nmark (tr,bind) = case whichNet npnet tr of
+        Left (sn :: SNet lab var Int)  ->
+            --let p = pre sn :: PTTrans -> SArc var Int PTPlace
+            let (SArc s) = pre sn tr :: SArc var Int PTPlace
+            in flip F.all s $ \(expr, p) ->
+                let v = map bind (vars expr)
+                in sublist v (lookupDefault [] p (unMark nmark))
+        Right (en,enLab,enMark) -> enabled en enMark tr
+    fire     = undefined
+
+lookupDefault :: (Ord k) => a -> k -> M.Map k a -> a
+lookupDefault a m = fromMaybe a . M.lookup m
+sublist a b = MSet.isSubsetOf (MSet.fromList a) (MSet.fromList b)
