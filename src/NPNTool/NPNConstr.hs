@@ -11,7 +11,7 @@ module NPNTool.NPNConstr (
   insPlace, 
   inT, outT, mark, marks,
   -- ** 'PTC.PTConstrM' and 'PTNet' interface
-  liftPTC, liftElemNet, insElemNet,
+  liftPTC, liftElemNet, insElemNet, liftElemNet_, 
   -- * Generalized arcs (with expressions)
   ArcExpr (..)
   ) where
@@ -23,6 +23,7 @@ import qualified Data.Map as M
 import qualified Data.IntMap as IM
 import Control.Monad.State
 import Control.Arrow (second)
+import Control.Applicative ((<$>))
 import Data.Monoid
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -120,7 +121,7 @@ addElemNet en = do
   return (ElemNetId keyEN')
 
 -- | Useful for working with a priori correct data,
---  generally use 'addElemNet' instead
+--  generally use 'liftElemNet' instead
 insElemNet :: Int -> PTC.PTConstrM l a -> NPNConstrM l v a
 insElemNet k ptc = do
   st <- get
@@ -133,14 +134,29 @@ insElemNet k ptc = do
 -- | `Lifts' an elementary net, described by the 'PTC.PTConstrM' into the
 -- 'NPNConstrM' monad and adds it to the system. 
 liftElemNet :: PTC.PTConstrM l a -> NPNConstrM l v ElemNetId
-liftElemNet ptc = do
+liftElemNet ptc = snd <$> liftElemNet_ ptc
+
+-- | `Lifts' an elementary net, described by the 'PTC.PTConstrM' into
+-- the 'NPNConstrM' monad and adds it to the system. Also keeps track
+-- of the 'PTC.PTconstrM' value.
+liftElemNet_ :: PTC.PTConstrM l a -> NPNConstrM l v (a, ElemNetId)
+liftElemNet_ ptc = do
   st <- get
-  let (_,net,lab) = PTC.runL ptc PTC.new
-      en = (net,lab,initial net)
-      nets' = nets st
+  let ptc' = ptc >>= \a -> do
+          kk <- get
+          return (a, PTC.key kk, PTC.keyT kk)
+  let ((res, key', keyT'),net,lab) = PTC.runL ptc'
+                                     (PTC.new { PTC.key  = key  st
+                                              , PTC.keyT = keyT st
+                                              } )
+      en     = (net,lab,initial net)
+      nets'  = nets st
       keyEN' = keyEN st + 1
-  put $ st { nets = IM.insert keyEN' en nets', keyEN = keyEN' }
-  return (ElemNetId keyEN')
+  put $ st { nets = IM.insert keyEN' en nets'
+           , keyEN = keyEN'
+           , key   = key'
+           , keyT  = keyT' }
+  return (res, ElemNetId keyEN')
 
 -- | Creates a new place not yet present in the net  
 mkPlace :: Ord v => NPNConstrM l v PTPlace
