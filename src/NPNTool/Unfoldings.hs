@@ -20,7 +20,7 @@ module NPNTool.Unfoldings (
 
 import Prelude hiding (pred, all, any)
 import NPNTool.PetriNet
-import NPNTool.PTConstr  
+import NPNTool.PTConstr
 import qualified Data.Map as M
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -30,10 +30,9 @@ import Data.Foldable (foldMap, fold, forM_, all, any, find)
 import Data.List ((\\), sortBy, nub)
 import Data.Ord (comparing)
 import Control.Applicative
-import Control.Monad (replicateM, replicateM_)
 import Control.Monad.State hiding (forM_)
 import Data.Monoid ((<>), Monoid)
-import Data.Maybe (fromJust, catMaybes, isJust)
+import Data.Maybe (fromJust, catMaybes)
 
 
 ---- Occurence nets and branching processes
@@ -84,8 +83,14 @@ localConf bp = preds bp . Set.singleton
 
 ---- Orders and relations on nodes of branching processes
 
-class Node n m where
-  type CoNode n 
+-- | The 'Node' typeclass. 'n' - which type can be considered a node,
+-- 'm' - in what typ of net is it a node.
+class (n ~ CoNode (CoNode n))
+      => Node n m where
+  -- | 'CoNode n' is the dual of 'n'. Conditions and events are duals
+  -- of each other
+  type CoNode n
+  -- | Every node has a (finite) set of immediate predecessors
   pred :: m -> n -> Set (CoNode n)
 
 instance Node Condition OccurNet where
@@ -105,19 +110,16 @@ instance Node PTTrans PTNet where
   pred n = MSet.toSet . pre n
   
 -- | Predecessor nodes of the same type
-predPred :: (Ord n, Node n OccurNet, Node (CoNode n) OccurNet, 
-             n ~ CoNode (CoNode n)) 
+predPred :: (Ord n, Node n OccurNet, Node (CoNode n) OccurNet) 
             => BProc -> n -> Set n
 predPred (on,_) = foldMap (pred on) . pred on
 
 -- | Reflexive predecessor relationship
-predR :: (Ord n, Node n OccurNet, Node (CoNode n) OccurNet, 
-             n ~ CoNode (CoNode n)) 
+predR :: (Ord n, Node n OccurNet, Node (CoNode n) OccurNet) 
          => BProc -> n -> Set n
 predR bp p = p `Set.insert` (predPred bp p)
 
-predMany :: (Ord n, Node n OccurNet, Node (CoNode n) OccurNet, 
-             n ~ CoNode (CoNode n)) 
+predMany :: (Ord n, Node n OccurNet, Node (CoNode n) OccurNet) 
          => BProc -> Set n -> Set n
 predMany bp = fold . Set.map (predR bp)
 
@@ -128,8 +130,7 @@ fixedPoint f x = let it = iterate f x
                  in fst $ head $ dropWhile (uncurry (/=)) $ it `zip` (tail it)
 
 -- | Transitive closure of the predecessor relationship
-preds :: (Ord n, Node n OccurNet, Node (CoNode n) OccurNet, 
-             n ~ CoNode (CoNode n)) 
+preds :: (Ord n, Node n OccurNet, Node (CoNode n) OccurNet) 
          => BProc -> Set n -> Set n
 preds bp = fixedPoint (predMany bp)         
 
@@ -166,7 +167,7 @@ pairs (x:xs) ys = map (x,) ys ++ pairs xs ys
 -- | All the possible ways to choose @k@ elements from a list                  
 choose :: Int -> [a] -> [[a]]
 choose 0 _      = [[]]
-choose k []     = []
+choose _ []     = []
 choose k (x:xs) = map (x:) (choose (k-1) xs)
                   ++ choose k xs
 
@@ -178,7 +179,7 @@ conformingLabels (h,_) labels cands =
 
 -- | Whether a list of places are concurreny
 pairwiseCo :: BProc -> [PTPlace] -> Bool
-pairwiseCo bp []     = True
+pairwiseCo _  []     = True
 pairwiseCo bp (p:ps) = all (concurrent bp p) ps
                        && pairwiseCo bp ps
 
@@ -187,7 +188,7 @@ eqHom :: Hom -> PTTrans -> Event -> Bool
 eqHom (_,h) t1 t2 = t1 == h t2
 
 notPresent :: BProc -> PTTrans -> [PTPlace] -> Bool
-notPresent bp@(on,h) t = all (not . any (eqHom h t). flip postP on)
+notPresent (on,h) t = all (not . any (eqHom h t). flip postP on)
 
 hasCompanion :: BProc -> Event -> Bool
 hasCompanion bp@(on,_) t =
