@@ -422,6 +422,14 @@ dynTests = H.TestList [ H.TestLabel "DynNet test 1" (H.TestCase dynTest1)
                             (H.TestCase dynTestNPN1)
                       , H.TestLabel "DynNet test 2 for simplNPN"
                             (H.TestCase dynTestNPN2)
+                      , H.TestLabel "DynNet test 3 for simplNPN"
+                            (H.TestCase dynTestNPN3)
+                      , H.TestLabel "DynNet test 4 for simplNPN"
+                            (H.TestCase dynTestNPN4)
+                      , H.TestLabel "DynNet test 1 for Np2"
+                            (H.TestCase dynTestNP2_1)
+                      , H.TestLabel "DynNet test 2 for Np2"
+                            (H.TestCase dynTestNP2_2)
                       ]
 ctlTests = H.TestList [ H.TestLabel "CTL test 1" ctltest1 
                       , H.TestLabel "CTL test 2" ctltest2
@@ -550,9 +558,9 @@ snP2P = snd . flip NPC.run NPC.new $ do
   NPC.marks initPeer (map Right [peer1,peer2,peer3,peer4])
 
 simplENid :: ElemNetId
-t2, t3, k :: PTTrans
+t1, t2, t3, k :: PTTrans
 simplNPN  :: NPNet () String Int
-((k,t2,t3,simplENid), simplNPN) = flip NPC.run NPC.new $ do
+((k,t1,t2,t3,simplENid), simplNPN) = flip NPC.run NPC.new $ do
     (k, en1) <- liftElemNet_ simplEN
     [p1,p2,p3] <- replicateM 3 NPC.mkPlace
     [t1,t2,t3] <- replicateM 3 NPC.mkTrans
@@ -566,7 +574,7 @@ simplNPN  :: NPNet () String Int
 
     arcExpr p2 x t3
     arcExpr t3 x p3
-    return (k,t2,t3,en1)
+    return (k,t1,t2,t3,en1)
 
 simplEN :: PTConstrM () PTTrans
 simplEN = do
@@ -577,13 +585,53 @@ simplEN = do
     arc s2 k2
     arc k2 s3
     mark s1
-    label k1 ()
     label k2 ()
     return k2
 
 bind1       :: Binding String Int
 bind1    "x" = Right simplENid
 bind1     _  = Left  0
+
+simplEN2 = do
+    [s1,s2,s3] <- replicateM 3 mkPlace
+    [k1,k2]    <- replicateM 2 mkTrans
+    arc s1 k1
+    arc k1 s2
+    arc s2 k2
+    arc k2 s3
+    mark s2
+    label k2 ()
+    return k2
+
+npNet2Tr :: Trans
+np2E1 :: ElemNetId
+np2E2 :: ElemNetId
+npNet2 :: NPNet () String Int
+((npNet2Tr, np2E1, np2E2, np2E3), npNet2) = flip NPC.run NPC.new $ do
+    en1 <- liftElemNet simplEN
+    en2 <- liftElemNet simplEN2
+    en3 <- liftElemNet simplEN2
+    [p1,p2,p3] <- replicateM 3 NPC.mkPlace
+    t1 <- NPC.mkTrans
+    let x = Var "X"
+    let y = Var "Y"
+    arcExpr p1 y t1
+    arcExpr p2 x t1
+    arcExpr t1 (Plus x y) p3
+    NPC.label t1 ()
+    NPC.mark  p1 (Right en1)
+    NPC.mark  p1 (Right en3)
+    NPC.mark  p2 (Right en2)
+    return (t1, en1, en2, en3)
+
+bind2 "Y" = Right np2E1
+bind2 "X" = Right np2E2
+bind2  _  = Left  0
+
+bind2' "Y" = Right np2E3
+bind2' "X" = Right np2E2
+bind2'  _  = Left  0
+
 
 dynTestNPN1 :: H.Assertion
 dynTestNPN1 = H.assertBool "t2 should be enabled in simpl under bind1"
@@ -596,6 +644,19 @@ dynTestNPN2 = H.assertBool "k2 (from elem net) should *NOT* be enabled in simpl 
 dynTestNPN3 :: H.Assertion
 dynTestNPN3 = H.assertBool "t3 should *NOT* be enabled in simpl under bind1"
               (not (enabled simplNPN (initial (net simplNPN)) (t3, bind1)))
+
+dynTestNPN4 :: H.Assertion
+dynTestNPN4 = H.assertBool "t1 should *NOT* be enabled in simpl under bind1"
+              (not (enabled simplNPN (initial (net simplNPN)) (t1, bind1)))
+
+dynTestNP2_1 :: H.Assertion
+dynTestNP2_1 = H.assertBool "t1 should *NOT* be enabled in np2 under bind2"
+              (not (enabled npNet2 (initial (net npNet2)) (npNet2Tr, bind2)))
+
+dynTestNP2_2 :: H.Assertion
+dynTestNP2_2 = H.assertBool "t1 should be enabled in np2 under bind2' (two prime)"
+              (enabled npNet2 (initial (net npNet2)) (npNet2Tr, bind2'))
+
 dynTest1 :: H.Assertion
 dynTest1 = H.assertBool "t1 should be enabled in snP2P"
            (enabled (net snP2P) (initial (net snP2P)) (Trans "t1"))
